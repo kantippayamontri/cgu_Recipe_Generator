@@ -245,10 +245,10 @@ Ensure data quality and completeness.
 - [x] Clean navigation/UI text
 
 ### Medium Priority (Phase 3-4)
-- [ ] Implement ingredient parsing
-- [ ] Normalize units
-- [ ] Clean ingredient names
-- [ ] Extract and clean instructions
+- [x] Implement ingredient parsing
+- [x] Normalize units
+- [x] Clean ingredient names
+- [x] Extract and clean instructions
 
 ### Lower Priority (Phase 5-6)
 - [ ] Generate final CSV output
@@ -260,11 +260,11 @@ Ensure data quality and completeness.
 
 ## Files Created
 
-1. `data_preprocessing/phase1.py` - Phase 1: Data assessment script
-2. `data_preprocessing/phase2.py` - Phase 2: Text extraction & cleaning script
-3. `data_preprocessing/ingredient_parser.py` - Ingredient parsing module (Phase 3)
-4. `data_preprocessing/instruction_cleaner.py` - Instruction cleaning module (Phase 4)
-5. `data_preprocessing/process_extracted.py` - Main preprocessing script
+1. `data_preprocessing/phase1_data_assessment.py` - Phase 1: Data assessment script
+2. `data_preprocessing/phase2_text_extraction.py` - Phase 2: Text extraction & cleaning script
+3. `data_preprocessing/phase3_ingredient_parsing.py` - Phase 3: Ingredient parsing script
+4. `data_preprocessing/phase4_instruction_processing.py` - Phase 4: Instruction processing script
+5. `data_preprocessing/process_extracted.py` - Main preprocessing script (future)
 
 ---
 
@@ -299,4 +299,4 @@ Ensure data quality and completeness.
 ---
 
 *Last Updated: 2025-04-11*
-*Status: Phase 1-2 Complete, Phase 3-4 In Progress*
+*Status: Phase 1-4 Complete, Phase 5-6 In Progress*

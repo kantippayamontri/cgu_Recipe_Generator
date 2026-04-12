@@ -16,7 +16,7 @@ from typing import Any
 
 # Configuration
 INPUT_DIR = Path("data/process/extracted_recipes")
-OUTPUT_DIR = Path("data/process/parsed_recipes")
+OUTPUT_DIR = Path("data/process/parsed_ingredients")
 REPORT_PATH = Path("data/process/phase3_report.txt")
 
 # Unit normalization mapping

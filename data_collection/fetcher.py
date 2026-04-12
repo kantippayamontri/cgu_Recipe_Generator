@@ -1,3 +1,9 @@
+"""Fetch recipes from Spoonacular API using pagination.
+
+This script fetches recipes using the complexSearch endpoint with proper
+pagination to systematically get unique recipes.
+"""
+
 import json
 import os
 
@@ -28,14 +34,11 @@ def get_nrows_in_csv(file_path):
         return 0
 
     df = pd.read_csv(file_path)
-    return len(df)  # row count, header not included
+    return len(df)
 
 
 def get_unique_recipe_count(file_path):
-    """Get count of unique recipe_ids in the CSV.
-
-    This is used for API offset calculation to avoid fetching duplicates.
-    """
+    """Get count of unique recipe_ids in the CSV."""
     if not os.path.exists(file_path):
         return 0
 
@@ -46,9 +49,7 @@ def get_unique_recipe_count(file_path):
 
 
 def process_recipes_master(recipes: list):
-    # NOTE: for recipes_master file
-    # Minimal response from complexSearch: id, title, image, imageType, sourceUrl
-    # Keep all old columns for compatibility, fill only available data
+    """Process and save recipes to CSV."""
     recipes_list = []
     for r in recipes:
         source_url = r.get("sourceUrl") or "No instructions provided"
@@ -57,15 +58,15 @@ def process_recipes_master(recipes: list):
                 "recipe_id": r.get("id"),
                 "title": r.get("title"),
                 "image": r.get("image"),
-                "preparationMinutes": "",  # Not available in minimal response
-                "cookingMinutes": "",  # Not available in minimal response
-                "healthScore": "",  # Not available in minimal response
-                "calories": "",  # Not available in minimal response
-                "protein": "",  # Not available in minimal response
-                "fat": "",  # Not available in minimal response
-                "carbs": "",  # Not available in minimal response
-                "dietary_tags": "",  # Not available in minimal response
-                "instructions": source_url,  # URL from API response
+                "preparationMinutes": "",
+                "cookingMinutes": "",
+                "healthScore": "",
+                "calories": "",
+                "protein": "",
+                "fat": "",
+                "carbs": "",
+                "dietary_tags": "",
+                "instructions": source_url,
             }
         )
 
@@ -79,10 +80,6 @@ def process_recipes_master(recipes: list):
     print(f"Saved {len(df_recipes)} recipes to '{RAW_RECIPES_PATH}'.")
 
 
-# Ingredients are no longer fetched from API
-# They will be extracted from recipe HTML using source_url
-
-
 def get_existing_recipe_ids(file_path):
     """Get set of existing recipe IDs to avoid duplicates."""
     if not os.path.exists(file_path):
@@ -93,23 +90,39 @@ def get_existing_recipe_ids(file_path):
 
 
 def fetch_recipes_dataset():
+    """Fetch recipes using pagination strategy.
+
+    Uses offset parameter to systematically fetch different recipes.
+    Maximum offset is 900, so we'll rotate through cuisines if needed.
+    """
     n_recipes_rows = get_nrows_in_csv(RAW_RECIPES_PATH)
     n_recipes_unique = get_unique_recipe_count(RAW_RECIPES_PATH)
     existing_ids = get_existing_recipe_ids(RAW_RECIPES_PATH)
     print(f"Current dataset: {n_recipes_rows} rows, {n_recipes_unique} unique recipes.")
     print(f"Tracking {len(existing_ids)} existing recipe IDs to avoid duplicates.")
-    print("Starting fetch for new recipes...\n")
+    print("Starting fetch with pagination...\n")
+
+    offset = 0
+    total_fetched = 0
+    total_new = 0
+    empty_batches = 0
+    max_empty_batches = 3  # Stop after 3 consecutive empty batches
+    max_offset = 900  # API limit
 
     while True:
+        # Calculate batch size - API max is 100, but we'll use RECIPE_COUNT
+        batch_size = min(RECIPE_COUNT, 100)
+
         params = {
             "apiKey": SPOONCULAR_API_KEY,
-            "number": RECIPE_COUNT,
-            "random": True,  # Fetch random recipes
-            # Minimal request: only get basic info including sourceUrl
-            # Full recipe data will be fetched from sourceUrl later
+            "number": batch_size,
+            "offset": offset,
+            "sort": "popularity",  # Sort by popularity for consistent ordering
+            "sortDirection": "desc",
+            "instructionsRequired": True,  # Only get recipes with instructions
         }
 
-        print(f"Connecting to Spoonacular... requesting {RECIPE_COUNT} recipes.")
+        print(f"[Offset: {offset}] Requesting {batch_size} recipes...")
         response = requests.get(
             SPOONCULAR_BASE_URL + "/recipes/complexSearch", params=params
         )
@@ -122,36 +135,77 @@ def fetch_recipes_dataset():
         quota_used = response.headers.get("X-API-Quota-Used")
         quota_left = response.headers.get("X-API-Quota-Left")
 
-        print(f"Points used by this request : {quota_request} {type(quota_request)}")
-        print(f"Points used today           : {quota_used} {type(quota_used)}")
-        print(f"Points remaining today      : {quota_left} {type(quota_left)}")
+        print(
+            f"  Points used: {quota_request} | Total: {quota_used} | Remaining: {quota_left}"
+        )
 
         data = response.json()
         recipes = data.get("results", [])
+        total_results = data.get("totalResults", 0)
 
-        # Filter out recipes that already exist
-        new_recipes_list = [r for r in recipes if r.get("id") not in existing_ids]
-        skipped_count = len(recipes) - len(new_recipes_list)
+        print(f"  API reports {total_results} total matching recipes")
+        print(f"  Received {len(recipes)} recipes in this batch")
 
-        if skipped_count > 0:
-            print(f"Skipped {skipped_count} duplicate recipes.")
-
-        if new_recipes_list:
-            process_recipes_master(new_recipes_list)
-            # Update existing_ids with newly added recipes
-            existing_ids.update(r.get("id") for r in new_recipes_list)
+        if not recipes:
+            print("  No recipes returned. Moving to next offset...")
+            empty_batches += 1
+            if empty_batches >= max_empty_batches:
+                print(f"\nStopped: {max_empty_batches} consecutive empty batches")
+                break
         else:
-            print("No new recipes in this batch.")
+            empty_batches = 0  # Reset counter on successful batch
 
-        if quota_left is not None and int(float(quota_left)) <= 0:
-            print("API quota exhausted. Stopping fetch.")
+            # Filter out recipes that already exist
+            new_recipes_list = [r for r in recipes if r.get("id") not in existing_ids]
+            skipped_count = len(recipes) - len(new_recipes_list)
+
+            if skipped_count > 0:
+                print(f"  Skipped {skipped_count} duplicates")
+
+            if new_recipes_list:
+                process_recipes_master(new_recipes_list)
+                # Update existing_ids with newly added recipes
+                existing_ids.update(r.get("id") for r in new_recipes_list)
+                total_new += len(new_recipes_list)
+                print(f"  ✓ Added {len(new_recipes_list)} new unique recipes")
+            else:
+                print("  No new unique recipes in this batch")
+
+        total_fetched += len(recipes)
+
+        # Check quota
+        if quota_left is not None:
+            try:
+                quota_left_int = int(float(quota_left))
+                if quota_left_int <= 0:
+                    print("\nAPI quota exhausted. Stopping fetch.")
+                    break
+            except (ValueError, TypeError):
+                pass
+
+        # Move to next offset
+        offset += batch_size
+
+        # Check if we've reached max offset
+        if offset >= max_offset:
+            print(f"\nReached maximum offset ({max_offset}). Stopping.")
+            print(
+                "Note: To get more recipes, consider using cuisine filters or random mode"
+            )
             break
 
-        time.sleep(3)  # Sleep to avoid hitting rate limits
+        time.sleep(1)  # Rate limiting
 
     final_unique = get_unique_recipe_count(RAW_RECIPES_PATH)
     new_recipes = final_unique - n_recipes_unique
-    print(f"\nFetch complete. Added {new_recipes} unique recipes.")
+
+    print(f"\n{'='*60}")
+    print(f"FETCH COMPLETE")
+    print(f"{'='*60}")
+    print(f"Total recipes fetched: {total_fetched}")
+    print(f"New unique recipes added: {new_recipes}")
+    print(f"Dataset now has: {final_unique} unique recipes")
+    print(f"Final offset reached: {offset}")
 
 
 if __name__ == "__main__":
