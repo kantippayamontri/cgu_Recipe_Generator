@@ -177,6 +177,9 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
+# Local git worktrees
+.worktrees/
+
 # End of https://www.toptal.com/developers/gitignore/api/python
 # Python-generated files
 __pycache__/
