@@ -236,6 +236,100 @@ Ensure data quality and completeness.
 
 ---
 
+## Phase 7: TF-IDF Preprocessing
+
+### Objectives
+Prepare text data for TF-IDF vectorization by applying comprehensive NLP preprocessing to both ingredients and instructions.
+
+### Why TF-IDF Preprocessing?
+- **Ingredient normalization**: "carrots" and "carrot" should be the same term
+- **Text cleaning**: Remove noise (punctuation, stopwords, numbers)
+- **Vocabulary reduction**: Reduce unique terms from ~4,500 to ~3,200 (estimated -29%)
+- **Better vectors**: Clean text produces more meaningful TF-IDF features
+
+### Input
+- `data/process/recipes_final_validated.csv` (from Phase 6)
+- 1,575 validated recipes with structured ingredients and instructions
+
+### Processing Steps
+
+#### Step 7.1: Ingredient Preprocessing
+For each ingredient name:
+1. **Lowercase**: "Carrots" → "carrots"
+2. **Lemmatize**: "carrots" → "carrot" (singular form)
+3. **Tokenize**: Split multi-word ingredients
+4. **Remove stopwords**: Remove "and", "or", "of" from compound ingredients
+5. **Remove short tokens**: Remove tokens < 3 characters
+
+**Example:**
+```
+Input:  "green onions"
+Output: "green onion"
+
+Input:  "garlic cloves"
+Output: "garlic clove"
+```
+
+#### Step 7.2: Instruction Preprocessing
+For each instruction step:
+1. **Lowercase**: Convert to lowercase
+2. **Remove punctuation**: Strip ".,;:!?" etc.
+3. **Remove numbers**: "25 minutes" → "minutes" (optional)
+4. **Tokenize**: Split into words
+5. **Remove stopwords**: Remove common English words
+6. **Lemmatize**: Convert to base form ("cooking" → "cook")
+7. **Remove short tokens**: Keep only tokens >= 3 characters
+8. **Rejoin**: Combine back into clean text
+
+**Example:**
+```
+Input:  "Preheat the oven to 425 degrees."
+Output: "preheat oven degree"
+
+Input:  "Cook for 25 minutes or until golden brown."
+Output: "cook minute until golden brown"
+```
+
+#### Step 7.3: Create Combined Corpus
+- Merge preprocessed ingredients and instructions
+- Create single text field per recipe for TF-IDF
+- Calculate vocabulary statistics
+
+### Expected Output
+
+#### Files
+1. **`data/process/recipes_tfidf_ready.csv`**
+   - Same as Phase 6 output plus TF-IDF columns
+   
+2. **`data/process/tfidf_ingredients.json`**
+   - Preprocessed ingredient names per recipe
+   
+3. **`data/process/tfidf_instructions.json`**
+   - Preprocessed instruction steps per recipe
+
+4. **`data/process/phase7_report.md`**
+   - Vocabulary reduction statistics
+   - Sample before/after comparisons
+   - TF-IDF validation results
+
+#### New CSV Columns
+| Column | Description |
+|--------|-------------|
+| `ingredients_tfidf` | JSON array of preprocessed ingredient names |
+| `instructions_tfidf` | JSON array of preprocessed instruction steps |
+| `tfidf_text` | Combined ingredients + instructions (for TF-IDF) |
+| `ingredient_vocab_size` | Number of unique ingredient terms |
+| `instruction_vocab_size` | Number of unique instruction terms |
+| `total_vocab_size` | Combined vocabulary size |
+
+### Dependencies
+- `nltk` (already in pyproject.toml)
+  - `wordnet` for lemmatization
+  - `stopwords` for stopword removal
+  - `punkt` for tokenization
+
+---
+
 ## Implementation Priority
 
 ### High Priority (Phase 1-2)
@@ -250,11 +344,12 @@ Ensure data quality and completeness.
 - [x] Clean ingredient names
 - [x] Extract and clean instructions
 
-### Lower Priority (Phase 5-6)
-- [ ] Generate final CSV output
-- [ ] Implement validation checks
-- [ ] Generate quality reports
-- [ ] Review sample data
+### Lower Priority (Phase 5-7)
+- [x] Generate final CSV output
+- [x] Implement validation checks
+- [x] Generate quality reports
+- [x] Review sample data
+- [x] Implement TF-IDF preprocessing (Phase 7)
 
 ---
 
@@ -264,7 +359,10 @@ Ensure data quality and completeness.
 2. `data_preprocessing/phase2_text_extraction.py` - Phase 2: Text extraction & cleaning script
 3. `data_preprocessing/phase3_ingredient_parsing.py` - Phase 3: Ingredient parsing script
 4. `data_preprocessing/phase4_instruction_processing.py` - Phase 4: Instruction processing script
-5. `data_preprocessing/process_extracted.py` - Main preprocessing script (future)
+5. `data_preprocessing/phase5_structure_output.py` - Phase 5: Structured output generation
+6. `data_preprocessing/phase6_validation.py` - Phase 6: Validation & quality control
+7. `data_preprocessing/phase7_tfidf_preprocessing.py` - Phase 7: TF-IDF preprocessing
+8. `data_preprocessing/process_extracted.py` - Main preprocessing script (future)
 
 ---
 
@@ -273,7 +371,14 @@ Ensure data quality and completeness.
 - **Phase 1 Report:** `data/process/phase1_report.txt`
 - **Phase 2 Report:** `data/process/phase2_report.txt`
 - **Extracted Recipes:** `data/process/extracted_recipes/{recipe_id}.json`
-- **Processed CSV:** `data/process/recipes_processed.csv`
+- **Parsed Ingredients:** `data/process/parsed_ingredients/{recipe_id}.json`
+- **Processed Recipes:** `data/process/processed_recipes/{recipe_id}.json`
+- **Phase 5 CSV:** `data/process/recipes_processed.csv`
+- **Phase 6 Validated CSV:** `data/process/recipes_final_validated.csv`
+- **Phase 6 Reports:** `data/process/phase6_summary_report.md`, `data/process/phase6_anomalies.log`, `data/process/phase6_sample_review.md`
+- **Phase 7 TF-IDF CSV:** `data/process/recipes_tfidf_ready.csv`
+- **Phase 7 Reports:** `data/process/phase7_report.md`
+- **TF-IDF JSON Files:** `data/process/tfidf_ingredients.json`, `data/process/tfidf_instructions.json`
 - **Quality Report:** `data/process/preprocessing_report.txt`
 - **Failed Extractions:** `data/process/failed_extractions.log`
 
@@ -298,5 +403,5 @@ Ensure data quality and completeness.
 
 ---
 
-*Last Updated: 2025-04-11*
-*Status: Phase 1-4 Complete, Phase 5-6 In Progress*
+*Last Updated: 2025-04-13*
+*Status: Phase 1-6 Complete, Phase 7 In Progress*
