@@ -148,11 +148,12 @@ cgu_Recipe_Generator/
    │ ├── searcher.py          # search_documents, SearchResult
    │ └── similarity.py        # find_similar_documents, SimilarRecipe
 │
-├── n_gram/                      # N-gram autocomplete
-│   ├── __init__.py
-│   ├── model.py
-│   ├── trainer.py
-│   └── suggester.py
+   ├── n_gram/ # N-gram autocomplete module
+   │ ├── __init__.py          # Package API exports
+   │ ├── model.py             # NGramDocument, NGramIndex dataclasses
+   │ ├── loader.py            # load_suggestion_documents from recipe index
+   │ ├── trainer.py           # build_n_gram_index with prefix lookup
+   │ └── suggester.py         # suggest_phrases for autocomplete
 │
 ├── tests/                       # All tests
 │
@@ -206,14 +207,22 @@ cgu_Recipe_Generator/
 - Demo script: `uv run python -m tf_idf --query "tomato pasta"`
 - Similarity: `uv run python -m tf_idf --similar-to <recipe_id>`
 
-### 9. Security Rules
+### 9. N-Gram Module Rules (n_gram/)
+- Autocomplete suggestion module integrated with `server/`
+- Trained on recipe titles + ingredient names from `index_service.load_index()`
+- Prefix-based matching: "tom" → "tomato", "tomato pasta"
+- Integrated into `/api/v1/search/suggest` endpoint
+- All functions must have type hints and docstrings
+- All modules must have corresponding tests in `tests/`
+
+### 10. Security Rules
 - NEVER commit `.env` or API keys
 - ALWAYS read secrets from environment via `config.py`
 - Rate limit Spoonacular API calls (1s between requests)
 - Validate all user inputs
 - CORS configured for frontend origin only
 
-### 10. Testing Rules
+### 11. Testing Rules
 - Every new endpoint/function MUST have tests
 - Use `pytest` with fixtures
 - Mock external API calls
@@ -287,6 +296,7 @@ dependencies = [
 - Frontend dev: `cd frontend && npm run dev`
 - TF-IDF demo: `uv run python -m tf_idf --query "tomato pasta"`
 - TF-IDF similarity: `uv run python -m tf_idf --similar-to 100`
+- N-gram autocomplete: Built into `/api/v1/search/suggest` endpoint
 
 ### Testing
 - Run all tests: `pytest tests/`
