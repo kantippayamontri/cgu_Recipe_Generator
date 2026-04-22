@@ -1,4 +1,5 @@
 """Demo script for TF-IDF search and similarity with sklearn baseline comparison."""
+
 from __future__ import annotations
 
 import argparse
@@ -22,9 +23,11 @@ def demo_search(csv_path: Path, query: str, limit: int = 5) -> None:
     documents = load_tfidf_documents(csv_path)
     print(f"Loaded {len(documents)} documents\n")
 
-    print(f"Building TF-IDF index...")
+    print("Building TF-IDF index...")
     index = build_tfidf_index(documents)
-    print(f"Index built: {index.document_count} docs, {len(index.feature_names)} features\n")
+    print(
+        f"Index built: {index.document_count} docs, {len(index.feature_names)} features\n"
+    )
 
     # Search results
     print(f"Query: '{query}'")
@@ -58,7 +61,7 @@ def demo_similarity(csv_path: Path, recipe_id: int, limit: int = 5) -> None:
     documents = load_tfidf_documents(csv_path)
     print(f"Loaded {len(documents)} documents\n")
 
-    print(f"Building TF-IDF index...")
+    print("Building TF-IDF index...")
     index = build_tfidf_index(documents)
     print(f"Index built: {index.document_count} docs\n")
 
@@ -77,9 +80,7 @@ def demo_similarity(csv_path: Path, recipe_id: int, limit: int = 5) -> None:
 
 def main() -> None:
     """Run TF-IDF demo based on command-line arguments."""
-    parser = argparse.ArgumentParser(
-        description="TF-IDF Recipe Search Demo"
-    )
+    parser = argparse.ArgumentParser(description="TF-IDF Recipe Search Demo")
     parser.add_argument(
         "--csv",
         type=Path,
@@ -109,7 +110,9 @@ def main() -> None:
 
     if not args.csv.exists():
         print(f"Error: CSV file not found: {args.csv}")
-        print("Run the Phase 7 preprocessing pipeline first to generate the TF-IDF ready CSV.")
+        print(
+            "Run the Phase 7 preprocessing pipeline first to generate the TF-IDF ready CSV."
+        )
         return
 
     if args.similar_to is not None:
