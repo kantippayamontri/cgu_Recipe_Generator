@@ -1,5 +1,7 @@
+node_modules/*
 test_*
 .omx
+.qoder
 data/*
 courses/*
 # Created by https://www.toptal.com/developers/gitignore/api/python

@@ -1,4 +1,5 @@
 """TF-IDF recipe search and similarity package."""
+
 from tf_idf.indexer import TfidfIndex, build_tfidf_index
 from tf_idf.loader import TfidfDocument, load_tfidf_documents
 from tf_idf.searcher import SearchResult, search_documents

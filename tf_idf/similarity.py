@@ -1,4 +1,5 @@
 """TF-IDF recipe similarity search."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -44,9 +45,7 @@ def find_similar_documents(
         score = float(scores[candidate_index])
         if score <= 0:
             continue
-        results.append(
-            SimilarRecipe(recipe_id=candidate_recipe_id, score=score)
-        )
+        results.append(SimilarRecipe(recipe_id=candidate_recipe_id, score=score))
         if len(results) >= limit:
             break
 

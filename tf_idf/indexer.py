@@ -1,4 +1,5 @@
 """TF-IDF index builder using scikit-learn baseline."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

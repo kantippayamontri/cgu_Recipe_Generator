@@ -17,3 +17,8 @@ BACKUP_RAW_RECIPES_PATH = "data/backup_search/recipes_master.csv"
 BACKUP_RAW_INGREDIENTS_PATH = "data/backup_search/ingredients_standard.csv"
 
 # define the endpoints
+
+# server configuration
+DATA_PATH = "data/process/recipes_tfidf_ready.csv"
+PROCESSED_RECIPES_DIR = "data/process/processed_recipes"
+TFIDF_INGREDIENTS_PATH = "data/process/tfidf_ingredients.json"

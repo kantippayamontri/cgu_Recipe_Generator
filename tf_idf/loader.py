@@ -1,4 +1,5 @@
 """Load TF-IDF-ready recipe documents from Phase 7 CSV output."""
+
 from dataclasses import dataclass
 from pathlib import Path
 

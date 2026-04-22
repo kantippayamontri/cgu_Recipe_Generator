@@ -1,5 +1,6 @@
 """Tests for the TF-IDF indexer module."""
-from tf_idf.indexer import TfidfIndex, build_tfidf_index
+
+from tf_idf.indexer import build_tfidf_index
 from tf_idf.loader import TfidfDocument
 
 
