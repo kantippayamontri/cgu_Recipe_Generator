@@ -140,12 +140,13 @@ cgu_Recipe_Generator/
 │   │       └── recipe.ts
 │   └── index.html
 │
-├── tf_idf/                      # TF-IDF search engine
-│   ├── __init__.py
-│   ├── indexer.py
-│   ├── searcher.py
-│   ├── similarity.py
-│   └── loader.py
+   ├── tf_idf/ # TF-IDF search engine (educational/demo module)
+   │ ├── __init__.py          # Package API exports
+   │ ├── __main__.py          # Runnable demo script
+   │ ├── indexer.py           # TfidfIndex, build_tfidf_index, top_terms_for_document
+   │ ├── loader.py            # TfidfDocument, load_tfidf_documents from Phase 7 CSV
+   │ ├── searcher.py          # search_documents, SearchResult
+   │ └── similarity.py        # find_similar_documents, SimilarRecipe
 │
 ├── n_gram/                      # N-gram autocomplete
 │   ├── __init__.py
@@ -196,14 +197,23 @@ cgu_Recipe_Generator/
 - Run via: `uv run python -m data_preprocessing.full_preprocess`
 - Phase options: `--from N`, `--to N`, `--only N`
 
-### 8. Security Rules
+### 8. TF-IDF Module Rules (tf_idf/)
+- Educational/demo module independent from `server/`
+- Uses Phase 7 output: `data/process/recipes_tfidf_ready.csv`
+- Hybrid approach: sklearn TfidfVectorizer for matrix, custom logic for workflows
+- All functions must have type hints and docstrings
+- All modules must have corresponding tests in `tests/`
+- Demo script: `uv run python -m tf_idf --query "tomato pasta"`
+- Similarity: `uv run python -m tf_idf --similar-to <recipe_id>`
+
+### 9. Security Rules
 - NEVER commit `.env` or API keys
 - ALWAYS read secrets from environment via `config.py`
 - Rate limit Spoonacular API calls (1s between requests)
 - Validate all user inputs
 - CORS configured for frontend origin only
 
-### 9. Testing Rules
+### 10. Testing Rules
 - Every new endpoint/function MUST have tests
 - Use `pytest` with fixtures
 - Mock external API calls
@@ -275,6 +285,8 @@ dependencies = [
 - Single phase: `uv run -m data_preprocessing.full_preprocess --only 5`
 - Backend server: `uv run -m server.main`
 - Frontend dev: `cd frontend && npm run dev`
+- TF-IDF demo: `uv run python -m tf_idf --query "tomato pasta"`
+- TF-IDF similarity: `uv run python -m tf_idf --similar-to 100`
 
 ### Testing
 - Run all tests: `pytest tests/`
