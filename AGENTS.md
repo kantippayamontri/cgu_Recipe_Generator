@@ -214,6 +214,9 @@ cgu_Recipe_Generator/
 - Integrated into `/api/v1/search/suggest` endpoint
 - All functions must have type hints and docstrings
 - All modules must have corresponding tests in `tests/`
+- Training data: recipe titles and ingredient names (normalized, lowercase)
+- Ranking: by match quality (prefix) then by frequency
+- Blank query returns top phrases by frequency
 
 ### 10. Security Rules
 - NEVER commit `.env` or API keys
