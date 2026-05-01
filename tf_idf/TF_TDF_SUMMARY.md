@@ -11,6 +11,7 @@
 The `tf_idf/` module is an **educational, standalone TF-IDF search engine** that operates independently from the main `server/` backend. It uses a **hybrid approach**: scikit-learn's `TfidfVectorizer` for matrix computation, with custom logic for search and similarity workflows.
 
 **Key Design Decisions:**
+
 1. **Independent from backend** - Does not integrate with `server/` routes
 2. **Uses Phase 7 output** - Reads from `data/process/recipes_tfidf_ready.csv`
 3. **Hybrid implementation** - sklearn for TF-IDF math, custom code for workflows
@@ -28,15 +29,18 @@ The `tf_idf/` module is an **educational, standalone TF-IDF search engine** that
 **Why:** Need a typed interface to load preprocessed recipe text from Phase 7 CSV output
 
 **Key Features:**
+
 - Validates required columns (`recipe_id`, `tfidf_text`)
 - Skips empty/NaN text rows
 - Returns list of `TfidfDocument` instances
 
 **Files Created:**
+
 - `tf_idf/loader.py` - Loader implementation
 - `tests/test_tfidf_loader.py` - 3 tests for loader behavior
 
 **Test Coverage:**
+
 - ✅ Returns recipe IDs and text from CSV
 - ✅ Skips empty text rows
 - ✅ Raises ValueError for missing columns
@@ -50,16 +54,19 @@ The `tf_idf/` module is an **educational, standalone TF-IDF search engine** that
 **Why:** Need to build TF-IDF index from documents and expose vocabulary/feature information
 
 **Key Features:**
+
 - Uses `sklearn.feature_extraction.text.TfidfVectorizer`
 - Configured with `ngram_range=(1, 2)`, `lowercase=True`
 - Exposes `top_terms_for_document()` for educational insights
 - Includes `compare_query()` for baseline comparison
 
 **Files Modified:**
+
 - `tf_idf/indexer.py` - Complete rewrite (was basic term frequency only)
 - `tests/test_tfidf_indexer.py` - 3 tests for index building
 
 **Test Coverage:**
+
 - ✅ Preserves recipe IDs in order
 - ✅ Exposes feature names from vocabulary
 - ✅ Returns top TF-IDF terms per document
@@ -73,16 +80,19 @@ The `tf_idf/` module is an **educational, standalone TF-IDF search engine** that
 **Why:** Enable querying the index to find recipes matching a text query
 
 **Key Features:**
+
 - Uses cosine similarity between query vector and document matrix
 - Returns ranked results by similarity score
 - Handles blank queries gracefully (returns empty list)
 - Configurable result limit
 
 **Files Created:**
+
 - `tf_idf/searcher.py` - Search implementation
 - `tests/test_tfidf_searcher.py` - 2 tests for search behavior
 
 **Test Coverage:**
+
 - ✅ Ranks best match first
 - ✅ Returns empty list for blank queries
 
@@ -95,16 +105,19 @@ The `tf_idf/` module is an **educational, standalone TF-IDF search engine** that
 **Why:** Enable finding recipes similar to a given source recipe
 
 **Key Features:**
+
 - Uses cosine similarity between document vectors
 - Excludes source recipe from results
 - Handles unknown recipe IDs (returns empty list)
 - Configurable result limit
 
 **Files Created:**
+
 - `tf_idf/similarity.py` - Similarity implementation
 - `tests/test_tfidf_similarity.py` - 2 tests for similarity behavior
 
 **Test Coverage:**
+
 - ✅ Excludes source recipe
 - ✅ Returns empty list for unknown recipe ID
 
@@ -117,6 +130,7 @@ The `tf_idf/` module is an **educational, standalone TF-IDF search engine** that
 **Why:** Provide clean public API for the module
 
 **Exports:**
+
 ```python
 from tf_idf import (
     TfidfDocument,
@@ -139,6 +153,7 @@ from tf_idf import (
 **Why:** Provide immediate hands-on usage for learning and testing
 
 **Features:**
+
 - `--query` - Search recipes by text
 - `--similar-to` - Find similar recipes
 - `--csv` - Custom CSV path (default: Phase 7 output)
@@ -146,6 +161,7 @@ from tf_idf import (
 - Displays both search results and sklearn baseline comparison
 
 **Usage Examples:**
+
 ```bash
 # Search for recipes
 uv run python -m tf_idf --query "tomato pasta" --limit 5
@@ -205,7 +221,7 @@ class TfidfIndex:
     vectorizer: TfidfVectorizer
     matrix: csr_matrix
     feature_names: list[str]
-    
+
     def top_terms_for_document(recipe_id: int, limit: int = 5) -> list[tuple[str, float]]
     def compare_query(query: str, limit: int = 5) -> list[tuple[int, float]]
 
@@ -244,16 +260,19 @@ def find_similar_documents(index: TfidfIndex, recipe_id: int, limit: int = 5) ->
 **Test Suite:** 10 tests total
 
 **Run all TF-IDF tests:**
+
 ```bash
 uv run pytest tests/test_tfidf_*.py -v
 ```
 
 **Run with coverage:**
+
 ```bash
 uv run pytest tests/test_tfidf_*.py --cov=tf_idf --cov-report=term-missing
 ```
 
 **Test Results:**
+
 - ✅ `test_load_tfidf_documents_returns_recipe_id_and_text`
 - ✅ `test_load_tfidf_documents_skips_empty_text_rows`
 - ✅ `test_load_tfidf_documents_requires_expected_columns`
@@ -270,12 +289,14 @@ uv run pytest tests/test_tfidf_*.py --cov=tf_idf --cov-report=term-missing
 ## Quality Checks
 
 **Linting:**
+
 ```bash
 uv run ruff check tf_idf
 uv run ruff format tf_idf
 ```
 
 **Type Checking:**
+
 ```bash
 uv run mypy tf_idf --ignore-missing-imports --explicit-package-bases
 ```
@@ -287,11 +308,13 @@ uv run mypy tf_idf --ignore-missing-imports --explicit-package-bases
 ## Dependencies
 
 **Required (already in pyproject.toml):**
+
 - `scikit-learn>=1.5.0` - TfidfVectorizer, cosine_similarity
 - `pandas>=2.0.0` - CSV loading
 - `scipy` - Sparse matrix operations (via sklearn)
 
 **Test dependencies (already in dev dependencies):**
+
 - `pytest>=8.0.0`
 - `pytest-cov>=5.0.0`
 
@@ -321,18 +344,35 @@ SearchResult[]     SimilarRecipe[]
 
 ---
 
+## Input Vector Difference (Search vs Similarity)
+
+Both workflows use cosine similarity and rank with descending scores, but the input vector source is different.
+
+- `search_documents()` in `searcher.py`
+  - Input vector comes from user text query: `vectorizer.transform([query])`
+  - Compares query vector against all recipe vectors in the TF-IDF matrix
+
+- `find_similar_documents()` in `similarity.py`
+  - Input vector comes from a selected recipe row: `index.matrix[row_index]`
+  - Compares that recipe vector against all recipe vectors in the TF-IDF matrix
+  - Excludes the source recipe from final results
+
+In short: search is `query -> all documents`, similarity is `one document -> all documents`.
+
+---
+
 ## Comparison with Backend
 
-| Feature | `tf_idf/` (Demo) | `server/services/search_service.py` |
-|---------|-----------------|-------------------------------------|
-| **Purpose** | Educational/demo | Production API |
-| **Integration** | Standalone | Integrated with FastAPI |
-| **Vectorizer** | sklearn TfidfVectorizer | sklearn TfidfVectorizer |
-| **Config** | Hardcoded params | Loaded via config.py |
-| **Caching** | None (in-memory) | Module-level cache |
-| **Query Support** | Text search, similarity | Text search, similarity, filters, suggestions |
-| **Response Format** | Simple dataclasses | Pydantic models |
-| **Tests** | 10 pytest tests | Integrated API tests |
+| Feature             | `tf_idf/` (Demo)        | `server/services/search_service.py`           |
+| ------------------- | ----------------------- | --------------------------------------------- |
+| **Purpose**         | Educational/demo        | Production API                                |
+| **Integration**     | Standalone              | Integrated with FastAPI                       |
+| **Vectorizer**      | sklearn TfidfVectorizer | sklearn TfidfVectorizer                       |
+| **Config**          | Hardcoded params        | Loaded via config.py                          |
+| **Caching**         | None (in-memory)        | Module-level cache                            |
+| **Query Support**   | Text search, similarity | Text search, similarity, filters, suggestions |
+| **Response Format** | Simple dataclasses      | Pydantic models                               |
+| **Tests**           | 10 pytest tests         | Integrated API tests                          |
 
 ---
 
@@ -367,20 +407,24 @@ These were considered but excluded per YAGNI principle:
 ## Running the Demo
 
 **Prerequisites:**
+
 1. Run Phase 7 preprocessing: `uv run python -m data_preprocessing.full_preprocess --only 7`
 2. Ensure `data/process/recipes_tfidf_ready.csv` exists
 
 **Search Example:**
+
 ```bash
 uv run python -m tf_idf --query "tomato basil pasta" --limit 5
 ```
 
 **Similarity Example:**
+
 ```bash
 uv run python -m tf_idf --similar-to 100 --limit 5
 ```
 
 **Expected Output:**
+
 ```
 Loading documents from data/process/recipes_tfidf_ready.csv...
 Loaded 941 documents
@@ -408,6 +452,7 @@ Sklearn Baseline Comparison:
 ## Git Commits
 
 All implementation committed with clear messages:
+
 1. `feat(tf_idf): add loader module with TfidfDocument and tests`
 2. `feat(tf_idf): add hybrid indexer with TfidfIndex and top terms`
 3. `feat(tf_idf): add searcher with search_documents function`
@@ -421,6 +466,7 @@ All implementation committed with clear messages:
 ## Conclusion
 
 The `tf_idf/` module successfully implements an educational TF-IDF search and similarity engine with:
+
 - ✅ Clean, typed API
 - ✅ Comprehensive test coverage
 - ✅ Runnable demo script

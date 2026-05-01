@@ -6,6 +6,10 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from n_gram.loader import load_suggestion_documents
+from n_gram.model import NGramIndex
+from n_gram.suggester import suggest_phrases
+from n_gram.trainer import build_n_gram_index
 from server.schemas.recipe import (
     IngredientResponse,
     InstructionResponse,
@@ -20,11 +24,12 @@ logger = logging.getLogger(__name__)
 _cached_index: IndexData | None = None
 _tfidf_vectorizer: TfidfVectorizer | None = None
 _tfidf_matrix: np.ndarray | None = None
+_ngram_index: NGramIndex | None = None
 
 
 def _ensure_index() -> IndexData:
-    """Load and cache the index with TF-IDF matrix on first call."""
-    global _cached_index, _tfidf_vectorizer, _tfidf_matrix  # noqa: PLW0603
+    """Load and cache the index with TF-IDF matrix and n-gram index on first call."""
+    global _cached_index, _tfidf_vectorizer, _tfidf_matrix, _ngram_index  # noqa: PLW0603
 
     if _cached_index is not None:
         return _cached_index
@@ -48,6 +53,10 @@ def _ensure_index() -> IndexData:
     )
     _tfidf_matrix = _tfidf_vectorizer.fit_transform(corpus)
 
+    # Build n-gram prefix index for autocomplete
+    suggestion_docs = load_suggestion_documents(data)
+    _ngram_index = build_n_gram_index(suggestion_docs)
+
     return data
 
 
@@ -57,7 +66,7 @@ def _recipe_to_response(recipe: Recipe) -> RecipeResponse:
         id=recipe.id,
         title=recipe.title,
         description=recipe.title,  # Use title as description since CSV lacks descriptions
-        image="",
+        image=recipe.image,
         categories=recipe.categories,
         cookTimeMinutes=recipe.cook_time_minutes,
         servings=recipe.servings,
@@ -192,34 +201,14 @@ async def get_categories() -> list[str]:
 
 
 async def get_suggestions(query: str) -> list[str]:
-    """Return autocomplete suggestions based on ingredients and titles.
+    """Return autocomplete suggestions using n-gram prefix matching.
 
     Args:
         query: Partial search text from the user.
 
     Returns:
-        List of matching suggestion strings.
+        List of matching suggestion strings ranked by frequency then alphabetically.
     """
-    data = _ensure_index()
-
-    query_lower = query.lower().strip()
-
-    # Collect all unique ingredients and titles as suggestion pool
-    suggestions: set[str] = set()
-    for recipe in data.recipes.values():
-        if query_lower and query_lower in recipe.title.lower():
-            suggestions.add(recipe.title.lower())
-        for ing in recipe.ingredients:
-            name = ing.get("name", "").lower()
-            if query_lower and query_lower in name:
-                suggestions.add(name)
-
-    # If no query, return top ingredients
-    if not query_lower:
-        for recipe in data.recipes.values():
-            for ing in recipe.ingredients:
-                name = ing.get("name", "")
-                if name:
-                    suggestions.add(name.lower())
-
-    return sorted(suggestions)[:15]
+    _ensure_index()
+    assert _ngram_index is not None  # noqa: S101
+    return suggest_phrases(_ngram_index, query)

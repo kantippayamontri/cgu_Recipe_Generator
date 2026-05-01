@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import pandas as pd
+
 from tf_idf.indexer import build_tfidf_index
 from tf_idf.loader import load_tfidf_documents
 from tf_idf.searcher import search_documents
@@ -23,6 +25,11 @@ def demo_search(csv_path: Path, query: str, limit: int = 5) -> None:
     documents = load_tfidf_documents(csv_path)
     print(f"Loaded {len(documents)} documents\n")
 
+    df = pd.read_csv(csv_path)
+    id_to_title: dict[int, str] = {}
+    if "title" in df.columns:
+        id_to_title = dict(zip(df["recipe_id"].astype(int), df["title"].astype(str)))
+
     print("Building TF-IDF index...")
     index = build_tfidf_index(documents)
     print(
@@ -40,13 +47,15 @@ def demo_search(csv_path: Path, query: str, limit: int = 5) -> None:
 
     print("\nSearch Results (tf_idf.searcher):")
     for i, result in enumerate(results, 1):
-        print(f"  {i}. Recipe {result.recipe_id} (score: {result.score:.4f})")
+        title = id_to_title.get(result.recipe_id, "Unknown")
+        print(f"  {i}. [{result.recipe_id}] {title} (score: {result.score:.4f})")
 
     # Comparison baseline
     print("\nSklearn Baseline Comparison:")
     baseline_results = index.compare_query(query, limit=limit)
     for i, (recipe_id, score) in enumerate(baseline_results, 1):
-        print(f"  {i}. Recipe {recipe_id} (score: {score:.4f})")
+        title = id_to_title.get(recipe_id, "Unknown")
+        print(f"  {i}. [{recipe_id}] {title} (score: {score:.4f})")
 
 
 def demo_similarity(csv_path: Path, recipe_id: int, limit: int = 5) -> None:
@@ -60,6 +69,11 @@ def demo_similarity(csv_path: Path, recipe_id: int, limit: int = 5) -> None:
     print(f"Loading documents from {csv_path}...")
     documents = load_tfidf_documents(csv_path)
     print(f"Loaded {len(documents)} documents\n")
+
+    df = pd.read_csv(csv_path)
+    id_to_title: dict[int, str] = {}
+    if "title" in df.columns:
+        id_to_title = dict(zip(df["recipe_id"].astype(int), df["title"].astype(str)))
 
     print("Building TF-IDF index...")
     index = build_tfidf_index(documents)
@@ -75,7 +89,8 @@ def demo_similarity(csv_path: Path, recipe_id: int, limit: int = 5) -> None:
 
     print("\nSimilar Recipes:")
     for i, result in enumerate(results, 1):
-        print(f"  {i}. Recipe {result.recipe_id} (score: {result.score:.4f})")
+        title = id_to_title.get(result.recipe_id, "Unknown")
+        print(f"  {i}. [{result.recipe_id}] {title} (score: {result.score:.4f})")
 
 
 def main() -> None:

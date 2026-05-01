@@ -126,7 +126,7 @@ def load_index() -> IndexData:
             id=recipe_id,
             title=str(row.get("title", "")),
             description="",  # CSV has no description; will be derived
-            image="",  # CSV has no images
+            image=f"https://img.spoonacular.com/recipes/{recipe_id}-312x231.jpg",
             categories=_parse_categories(row),
             cook_time_minutes=_parse_cook_time(row),
             servings=_parse_servings(row),

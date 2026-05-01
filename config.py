@@ -5,6 +5,7 @@ import os
 load_dotenv()
 SPOONCULAR_API_KEY = os.getenv("SPOONCULAR_API_KEY")
 SPOONCULAR_BASE_URL = "https://api.spoonacular.com"
+HF_TOKEN = os.getenv("HF_TOKEN")
 RECIPE_COUNT = 900
 RECIPE_DATASET_PATH = "data/raw/recipes_dataset.csv"
 

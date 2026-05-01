@@ -89,12 +89,14 @@ def build_tfidf_index(documents: list[TfidfDocument]) -> TfidfIndex:
 
     vectorizer = TfidfVectorizer(
         lowercase=True,
-        ngram_range=(1, 2),
+        ngram_range=(1, 2),# ex) "chicken noodle soup" -> "chicken", "noodle", "soup", "chicken noodle", "noodle soup" -> capture word combinations for better search similarity
         min_df=1,
         max_df=1.0,
     )
-    matrix = vectorizer.fit_transform(corpus)
-    feature_names = list(vectorizer.get_feature_names_out())
+    matrix = vectorizer.fit_transform(corpus) # train the vectorizer on the corpus and transform the corpus into a sparse matrix of TF-IDF features
+    feature_names = list(vectorizer.get_feature_names_out()) # list of token (subword)
+    # print(f"TF-IDF index built with {len(feature_names)} features")
+    # print(f"Sample features: {feature_names[:10]} ... {feature_names[-10:]}")
 
     return TfidfIndex(
         recipe_ids=recipe_ids,

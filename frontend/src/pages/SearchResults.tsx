@@ -88,8 +88,7 @@ export function SearchResults() {
                 {query ? `Results for "${query}"` : 'Browse all recipes'}
               </h1>
               <p className="text-base text-on-surface-variant">
-                {recipes.length} matching recipes with mock filters and local
-                suggestions.
+                {recipes.length} recipes ranked by TF-IDF relevance.
               </p>
             </div>
 

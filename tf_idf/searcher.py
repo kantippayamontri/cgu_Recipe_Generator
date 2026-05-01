@@ -33,9 +33,13 @@ def search_documents(
     if not query.strip():
         return []
 
-    query_vector = index.vectorizer.transform([query])
-    scores = cosine_similarity(query_vector, index.matrix).flatten()
-    ranked_indices = scores.argsort()[::-1]
+    query_vector = index.vectorizer.transform(
+        [query]
+    )  # resulting in a sparse vector of shape (1, num_features) -> (1, vocab_size)
+    scores = cosine_similarity(
+        query_vector, index.matrix
+    ).flatten()  # scores each document -> shape (num_documents,)
+    ranked_indices = scores.argsort()[::-1] # sort indices by score in descending order -> output is list of index of documents sorted by relevance to the query
 
     results: list[SearchResult] = []
     for row_index in ranked_indices:
@@ -46,4 +50,4 @@ def search_documents(
         if len(results) >= limit:
             break
 
-    return results
+    return results # return the list of SearchResult objects containing the recipe_id and score for the top hits matching the query

@@ -1,11 +1,33 @@
-"""Fetch recipes from Spoonacular API using pagination.
+"""Fetch recipes from Spoonacular API using pagination or query-based search.
 
 This script fetches recipes using the complexSearch endpoint with proper
-pagination to systematically get unique recipes.
+pagination to systematically get unique recipes. It supports both offset-based
+pagination and query-based search for ingredients, cuisines, and dish types.
+
+Usage:
+    # Pagination mode (no filters)
+    uv run -m data_collection.fetcher
+
+    # Search by keyword
+    uv run -m data_collection.fetcher --query "chicken pasta"
+
+    # Search with cuisine and dish type filters
+    uv run -m data_collection.fetcher --query "salmon" --cuisine "japanese" --dish-type "main course"
+
+    # Sort by rating or relevance
+    uv run -m data_collection.fetcher --query "soup" --sort rating
+
+    # Random query (picks a random keyword + sort, no cuisine/dish-type filter)
+    uv run -m data_collection.fetcher --random
+
+    # Random ingredient query (picks a single random ingredient as query)
+    uv run -m data_collection.fetcher --random-ingredients
 """
 
 import json
 import os
+import random
+from dataclasses import dataclass
 
 import pandas as pd
 import requests
@@ -18,6 +40,68 @@ from config import (
 )
 
 import time
+
+# --- Predefined lists for random query generation ---
+
+VALID_QUERIES: list[str] = [
+    "chicken", "pasta", "salad", "soup", "beef", "salmon", "shrimp",
+    "vegetable", "rice", "tofu", "mushroom", "tomato", "garlic",
+    "lemon", "avocado", "spinach", "potato", "egg", "cheese", "bread",
+]
+
+VALID_INGREDIENTS: list[str] = [
+    "chicken", "beef", "pork", "salmon", "shrimp", "tuna", "lamb",
+    "tofu", "egg", "cheese", "butter", "milk", "cream",
+    "tomato", "garlic", "onion", "potato", "spinach", "mushroom",
+    "avocado", "lemon", "lime", "carrot", "broccoli", "pepper",
+    "zucchini", "eggplant", "corn", "peas", "cucumber", "celery",
+    "rice", "pasta", "bread", "flour", "oats",
+    "olive oil", "soy sauce", "ginger", "cilantro", "basil", "oregano",
+]
+
+VALID_CUISINES: list[str] = [
+    "italian", "mexican", "indian", "chinese", "japanese", "thai",
+    "mediterranean", "french", "greek", "spanish", "korean", "american",
+]
+
+VALID_DISH_TYPES: list[str] = [
+    "main course", "side dish", "dessert", "appetizer", "salad",
+    "soup", "breakfast", "snack", "drink",
+]
+
+VALID_SORT_ORDERS: list[str] = ["popularity", "rating", "relevance"]
+
+
+@dataclass(frozen=True)
+class RandomQueryParams:
+    """Randomly selected search parameters for Spoonacular API."""
+
+    query: str
+    sort: str
+
+
+def random_query() -> RandomQueryParams:
+    """Randomly select a query term and sort order.
+
+    Returns:
+        RandomQueryParams with randomly chosen query and sort only.
+    """
+    return RandomQueryParams(
+        query=random.choice(VALID_QUERIES),
+        sort=random.choice(VALID_SORT_ORDERS),
+    )
+
+
+def random_ingredient_query() -> RandomQueryParams:
+    """Randomly select a single ingredient as the search query.
+
+    Returns:
+        RandomQueryParams with a random ingredient as query and random sort.
+    """
+    return RandomQueryParams(
+        query=random.choice(VALID_INGREDIENTS),
+        sort=random.choice(VALID_SORT_ORDERS),
+    )
 
 
 def get_cached_data(CACHE_FILE) -> list:
@@ -89,18 +173,37 @@ def get_existing_recipe_ids(file_path):
     return set(df["recipe_id"].astype(int))
 
 
-def fetch_recipes_dataset():
-    """Fetch recipes using pagination strategy.
+def fetch_recipes_dataset(
+    query: str | None = None,
+    cuisine: str | None = None,
+    dish_type: str | None = None,
+    sort: str = "popularity",
+) -> None:
+    """Fetch recipes using pagination or query-based search.
 
-    Uses offset parameter to systematically fetch different recipes.
-    Maximum offset is 900, so we'll rotate through cuisines if needed.
+    Args:
+        query: Search query string (e.g., "chicken pasta", "tomato salad").
+        cuisine: Cuisine filter (e.g., "italian", "mexican", "indian").
+        dish_type: Dish type filter (e.g., "main course", "dessert", "appetizer").
+        sort: Sort order - "popularity", "rating", or "relevance".
     """
     n_recipes_rows = get_nrows_in_csv(RAW_RECIPES_PATH)
     n_recipes_unique = get_unique_recipe_count(RAW_RECIPES_PATH)
     existing_ids = get_existing_recipe_ids(RAW_RECIPES_PATH)
     print(f"Current dataset: {n_recipes_rows} rows, {n_recipes_unique} unique recipes.")
     print(f"Tracking {len(existing_ids)} existing recipe IDs to avoid duplicates.")
-    print("Starting fetch with pagination...\n")
+
+    # Build search description
+    search_parts = []
+    if query:
+        search_parts.append(f'query="{query}"')
+    if cuisine:
+        search_parts.append(f'cuisine="{cuisine}"')
+    if dish_type:
+        search_parts.append(f'dish_type="{dish_type}"')
+
+    search_desc = ", ".join(search_parts) if search_parts else "pagination mode"
+    print(f"Starting fetch with {search_desc}...\n")
 
     offset = 0
     total_fetched = 0
@@ -117,12 +220,24 @@ def fetch_recipes_dataset():
             "apiKey": SPOONCULAR_API_KEY,
             "number": batch_size,
             "offset": offset,
-            "sort": "popularity",  # Sort by popularity for consistent ordering
+            "sort": sort,
             "sortDirection": "desc",
             "instructionsRequired": True,  # Only get recipes with instructions
         }
 
-        print(f"[Offset: {offset}] Requesting {batch_size} recipes...")
+        # Add query-based search parameters
+        if query:
+            params["query"] = query
+        if cuisine:
+            params["cuisine"] = cuisine
+        if dish_type:
+            params["type"] = dish_type
+
+        if query or cuisine or dish_type:
+            print(f"[Offset: {offset}] Requesting {batch_size} recipes with query...")
+        else:
+            print(f"[Offset: {offset}] Requesting {batch_size} recipes...")
+
         response = requests.get(
             SPOONCULAR_BASE_URL + "/recipes/complexSearch", params=params
         )
@@ -209,4 +324,61 @@ def fetch_recipes_dataset():
 
 
 if __name__ == "__main__":
-    fetch_recipes_dataset()
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Fetch recipes from Spoonacular API with optional query-based search"
+    )
+    parser.add_argument(
+        "--query",
+        type=str,
+        default=None,
+        help="Search query (e.g., 'chicken pasta', 'tomato salad')",
+    )
+    parser.add_argument(
+        "--cuisine",
+        type=str,
+        default=None,
+        help="Cuisine filter (e.g., 'italian', 'mexican', 'indian')",
+    )
+    parser.add_argument(
+        "--dish-type",
+        type=str,
+        default=None,
+        help="Dish type (e.g., 'main course', 'dessert', 'appetizer')",
+    )
+    parser.add_argument(
+        "--sort",
+        type=str,
+        default="popularity",
+        choices=["popularity", "rating", "relevance"],
+        help="Sort order",
+    )
+    parser.add_argument(
+        "--random",
+        action="store_true",
+        help="Randomly select a query term and sort order (no cuisine/dish-type filter)",
+    )
+    parser.add_argument(
+        "--random-ingredients",
+        action="store_true",
+        help="Randomly select a single ingredient as the query (no cuisine/dish-type filter)",
+    )
+
+    args = parser.parse_args()
+
+    if args.random:
+        params = random_query()
+        print(f"Random mode: query={params.query!r}, sort={params.sort!r}")
+        fetch_recipes_dataset(query=params.query, sort=params.sort)
+    elif args.random_ingredients:
+        params = random_ingredient_query()
+        print(f"Random ingredient mode: query={params.query!r}, sort={params.sort!r}")
+        fetch_recipes_dataset(query=params.query, sort=params.sort)
+    else:
+        fetch_recipes_dataset(
+            query=args.query,
+            cuisine=args.cuisine,
+            dish_type=args.dish_type,
+            sort=args.sort,
+        )

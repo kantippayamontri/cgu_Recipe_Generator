@@ -42,3 +42,20 @@ def load_tfidf_documents(csv_path: Path) -> list[TfidfDocument]:
         documents.append(TfidfDocument(recipe_id=int(row["recipe_id"]), text=text))
 
     return documents
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Load TF-IDF documents from CSV")
+    parser.add_argument(
+        "csv_path",
+        type=Path,
+        help="Path to the Phase 7 TF-IDF-ready CSV file",
+    )
+    args = parser.parse_args()
+
+    try:
+        docs = load_tfidf_documents(args.csv_path)
+        print(f"Loaded {len(docs)} TF-IDF documents from {args.csv_path}")
+    except Exception as e:
+        print(f"Error loading TF-IDF documents: {e}")
