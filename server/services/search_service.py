@@ -37,21 +37,20 @@ def _ensure_index() -> IndexData:
     data = load_index()
     _cached_index = data
 
-    # Build TF-IDF vectorizer over combined ingredient + instruction text
+    # Build TF-IDF vectorizer — title repeated 3x to boost title match weight
     corpus = [
-        f"{ing_text} {instr_text}"
-        for ing_text, instr_text in zip(
-            data.ingredient_strings,
-            data.instruction_strings,
-        )
+        (f"{data.recipes[rid].title} " * 3) + ing_text
+        for rid, ing_text in zip(data.recipe_ids, data.ingredient_strings)
     ]
     _tfidf_vectorizer = TfidfVectorizer(
         lowercase=True,
         stop_words="english",
-        ngram_range=(1, 2),
+        ngram_range=(1, 2),  # bigrams to capture simple phrase patterns
         max_features=10_000,
     )
-    _tfidf_matrix = _tfidf_vectorizer.fit_transform(corpus)
+    _tfidf_matrix = _tfidf_vectorizer.fit_transform(
+        corpus
+    )  # train bigram TF-IDF vectorizer on recipe data
 
     # Build n-gram prefix index for autocomplete
     suggestion_docs = load_suggestion_documents(data)
@@ -94,6 +93,7 @@ async def search_recipes(request: SearchRequest) -> SearchResponse:
     """
     data = _ensure_index()
     results: list[RecipeResponse] = []
+    effective_limit = request.limit or 50
 
     if request.query.strip():
         # TF-IDF search
@@ -116,7 +116,7 @@ async def search_recipes(request: SearchRequest) -> SearchResponse:
 
             results.append(_recipe_to_response(recipe))
 
-            if request.limit and len(results) >= request.limit:
+            if len(results) >= effective_limit:
                 break
     else:
         # No query: return all recipes, optionally filtered by categories
@@ -128,7 +128,7 @@ async def search_recipes(request: SearchRequest) -> SearchResponse:
 
             results.append(_recipe_to_response(recipe))
 
-            if request.limit and len(results) >= request.limit:
+            if len(results) >= effective_limit:
                 break
 
     return SearchResponse(

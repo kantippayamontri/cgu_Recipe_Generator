@@ -29,11 +29,10 @@ Populated once on the first request via `_ensure_index()`. Reused for the lifeti
 _ensure_index()  — called on every request, skips if already cached
 │
 ├── load_index()  (from index_service)
-│       → IndexData { recipes, ingredient_strings,
-│                     instruction_strings, recipe_ids }
+│       → IndexData { recipes, ingredient_strings, recipe_ids }
 │
 ├── Build TF-IDF matrix
-│       corpus[i] = ingredient_strings[i] + " " + instruction_strings[i]
+│       corpus[i] = title[i] + " " + ingredient_strings[i]
 │       TfidfVectorizer(
 │           lowercase=True, stop_words="english",
 │           ngram_range=(1,2), max_features=10_000

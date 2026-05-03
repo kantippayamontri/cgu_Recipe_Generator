@@ -1,4 +1,5 @@
 """N-gram suggestion ranking."""
+
 from __future__ import annotations
 
 from n_gram.model import NGramIndex
@@ -27,4 +28,14 @@ def suggest_phrases(index: NGramIndex, query: str, limit: int = 15) -> list[str]
             key=lambda phrase: (-index.phrase_counts[phrase], phrase),
         )
         return ranked[:limit]
-    return index.prefix_map.get(normalized_query, [])[:limit]
+    matches = index.prefix_map.get(normalized_query, [])
+    if not matches:
+        words = normalized_query.split()
+        for i in range(len(words) - 1, 0, -1):
+            suffix = " ".join(words[-i:])
+            if suffix == normalized_query:
+                continue
+            matches = index.prefix_map.get(suffix, [])
+            if matches:
+                break
+    return matches[:limit]

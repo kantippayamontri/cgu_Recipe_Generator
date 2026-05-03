@@ -35,7 +35,6 @@ class IndexData:
     categories: list[str] = field(default_factory=list)
     # For TF-IDF search
     ingredient_strings: list[str] = field(default_factory=list)
-    instruction_strings: list[str] = field(default_factory=list)
     recipe_ids: list[int] = field(default_factory=list)
 
 
@@ -66,15 +65,6 @@ def _build_ingredients_text(ingredients: list[dict[str, str]]) -> str:
     )
 
 
-def _build_instruction_text(instructions: list[dict[str, str | int]]) -> str:
-    """Extract instruction descriptions for TF-IDF search text."""
-    return " ".join(
-        str(inst.get("description", ""))
-        for inst in instructions
-        if isinstance(inst, dict) and inst.get("description")
-    )
-
-
 def load_index() -> IndexData:
     """Load all recipes from CSV and build search indices.
 
@@ -88,7 +78,6 @@ def load_index() -> IndexData:
 
     recipes: dict[int, Recipe] = {}
     ingredient_strings: list[str] = []
-    instruction_strings: list[str] = []
     recipe_ids: list[int] = []
 
     for _, row in df.iterrows():
@@ -120,7 +109,6 @@ def load_index() -> IndexData:
                 )
 
         ingredients_text = _build_ingredients_text(normalized_ingredients)
-        instructions_text = _build_instruction_text(normalized_instructions)
 
         recipe = Recipe(
             id=recipe_id,
@@ -136,7 +124,6 @@ def load_index() -> IndexData:
         )
         recipes[recipe_id] = recipe
         ingredient_strings.append(ingredients_text)
-        instruction_strings.append(instructions_text)
         recipe_ids.append(recipe_id)
 
     # Collect unique categories
@@ -148,7 +135,6 @@ def load_index() -> IndexData:
         recipes=recipes,
         categories=sorted(all_categories),
         ingredient_strings=ingredient_strings,
-        instruction_strings=instruction_strings,
         recipe_ids=recipe_ids,
     )
 

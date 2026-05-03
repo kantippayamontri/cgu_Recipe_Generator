@@ -36,10 +36,9 @@ Container returned by `load_index()`.
 | `recipes` | `dict[int, Recipe]` | Lookup by recipe ID |
 | `categories` | `list[str]` | Sorted unique category names |
 | `ingredient_strings` | `list[str]` | Parallel list for TF-IDF |
-| `instruction_strings` | `list[str]` | Parallel list for TF-IDF |
 | `recipe_ids` | `list[int]` | Parallel list — index aligns with above |
 
-> **Note:** `ingredient_strings[i]`, `instruction_strings[i]`, and `recipe_ids[i]` always refer to the same recipe. This alignment is required by the TF-IDF vectorizer in `search_service`.
+> **Note:** `ingredient_strings[i]` and `recipe_ids[i]` always refer to the same recipe. This alignment is required by the TF-IDF vectorizer in `search_service`.
 
 ---
 
@@ -69,7 +68,6 @@ load_index()
 │   │
 │   ├── Build search text
 │   │     _build_ingredients_text()  → "chicken garlic onion ..."
-│   │     _build_instruction_text()  → "heat pan add oil stir ..."
 │   │
 │   ├── Construct Recipe dataclass
 │   │     Recipe(id, title, image, categories, cook_time_minutes,
@@ -78,7 +76,6 @@ load_index()
 │   └── Append to accumulators
 │         recipes[recipe_id] = recipe
 │         ingredient_strings.append(ingredients_text)   ← used by TF-IDF
-│         instruction_strings.append(instructions_text) ← used by TF-IDF
 │         recipe_ids.append(recipe_id)                  ← parallel index
 │
 ├── 3. COLLECT CATEGORIES
@@ -88,8 +85,7 @@ load_index()
         ├── recipes            dict[int, Recipe]   ← lookup by ID
         ├── categories         list[str]            ← filter sidebar
         ├── ingredient_strings list[str]            ── parallel lists
-        ├── instruction_strings list[str]           ── aligned by position
-        └── recipe_ids         list[int]            ── with recipe_ids
+        └── recipe_ids         list[int]            ── aligned by position
 ```
 
 ---
@@ -101,7 +97,6 @@ load_index()
 | `_parse_categories(row)` | Splits comma-separated category string, capitalizes each |
 | `_parse_json_list(raw)` | Safely parses JSON-encoded list from a CSV cell; returns `[]` on failure |
 | `_build_ingredients_text(ingredients)` | Joins ingredient `name` fields into a single string |
-| `_build_instruction_text(instructions)` | Joins instruction `description` fields into a single string |
 | `_format_amount(ingredient)` | Builds readable amount string from `quantity + unit + preparation` |
 | `_parse_cook_time(row)` | Tries `cook_time`, `prep_time`, `total_time` columns in order |
 | `_parse_iso_duration(value)` | Parses `PT25M` / `PT1H30M` ISO 8601 format into total minutes |
@@ -112,6 +107,7 @@ load_index()
 ## Key Design Points
 
 - **No persistence** — everything lives in memory; `load_index()` is called once at server startup via `search_service._ensure_index()`.
-- **Parallel lists** — `ingredient_strings`, `instruction_strings`, and `recipe_ids` are positionally aligned, enabling direct TF-IDF matrix indexing.
+- **Parallel lists** — `ingredient_strings` and `recipe_ids` are positionally aligned, enabling direct TF-IDF matrix indexing.
+- **TF-IDF corpus** — title + ingredient names only; instructions are excluded to keep search signal clean and relevant.
 - **ISO 8601 duration** — `_parse_iso_duration` handles both `PT25M` and `PT1H30M` formats.
 - **Instruction flexibility** — handles both plain string items and `{"step", "description"}` dict items from the CSV.
