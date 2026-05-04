@@ -20,6 +20,11 @@ export interface Recipe {
   instructions: Instruction[]
 }
 
+export interface CategoryInfo {
+  name: string
+  count: number
+}
+
 export interface SearchRequest {
   query: string
   filters?: string[]

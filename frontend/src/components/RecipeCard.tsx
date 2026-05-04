@@ -3,12 +3,18 @@ import { Link } from 'react-router-dom'
 
 import type { Recipe } from '../types/recipe.ts'
 
+const FALLBACK_IMAGE =
+  'https://images.unsplash.com/photo-1495521821757-a1efb47b3797?auto=format&fit=crop&w=1200&q=80'
+
 interface RecipeCardProps {
   recipe: Recipe
 }
 
 export function RecipeCard({ recipe }: RecipeCardProps) {
   const [isBookmarked, setIsBookmarked] = useState(false)
+  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>(
+    'loading',
+  )
 
   return (
     <article className="group relative overflow-hidden rounded-[2rem] bg-surface shadow-[0_24px_70px_-42px_rgba(59,57,13,0.48)] ring-1 ring-outline-variant/35 transition duration-300 hover:-translate-y-1">
@@ -24,11 +30,20 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       </button>
 
       <Link to={`/recipes/${recipe.id}`} className="block h-full">
-        <img
-          src={recipe.image}
-          alt={recipe.title}
-          className="h-60 w-full object-cover transition duration-500 group-hover:scale-[1.02]"
-        />
+        <div className="relative h-60 w-full bg-surface-container-high">
+          {imageStatus === 'loading' && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-outline-variant border-t-primary" />
+            </div>
+          )}
+          <img
+            src={imageStatus === 'error' ? FALLBACK_IMAGE : recipe.image}
+            alt={recipe.title}
+            onLoad={() => setImageStatus('loaded')}
+            onError={() => setImageStatus('error')}
+            className={`h-60 w-full object-cover transition duration-500 group-hover:scale-[1.02] ${imageStatus === 'loading' ? 'invisible' : ''}`}
+          />
+        </div>
 
         <div className="space-y-4 p-5">
           <div className="flex flex-wrap gap-2">

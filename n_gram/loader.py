@@ -1,13 +1,25 @@
 """N-gram suggestion training loader."""
 from __future__ import annotations
 
+import re
+
 from n_gram.model import NGramDocument
 from server.services.index_service import IndexData
 
+# Characters to strip from training phrases before indexing.
+# Keeps letters, digits, and spaces only.
+_STRIP_PATTERN = re.compile(r"[^a-z0-9 ]")
+
 
 def _normalize_phrase(value: str) -> str:
-    """Normalize a phrase for n-gram training."""
-    return " ".join(value.lower().split())
+    """Normalize a phrase for n-gram training.
+
+    Lowercases, removes non-alphanumeric characters (e.g. hyphens, parentheses),
+    and collapses whitespace.
+    """
+    lowered = value.lower()
+    cleaned = _STRIP_PATTERN.sub(" ", lowered)
+    return " ".join(cleaned.split())
 
 
 def load_suggestion_documents(data: IndexData) -> list[NGramDocument]:

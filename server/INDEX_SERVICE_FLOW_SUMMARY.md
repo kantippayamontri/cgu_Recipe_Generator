@@ -111,3 +111,159 @@ load_index()
 - **TF-IDF corpus** — title + ingredient names only; instructions are excluded to keep search signal clean and relevant.
 - **ISO 8601 duration** — `_parse_iso_duration` handles both `PT25M` and `PT1H30M` formats.
 - **Instruction flexibility** — handles both plain string items and `{"step", "description"}` dict items from the CSV.
+
+---
+
+## Autocomplete Suggestion System
+
+**Files:** `n_gram/trainer.py`, `n_gram/suggester.py`
+
+The N-gram index is built from recipe titles and ingredient names after `load_index()` completes. It powers the `/api/v1/search/suggest` endpoint.
+
+### Phrase Normalization (`n_gram/loader.py`)
+
+Before any phrase enters the index it passes through `_normalize_phrase`:
+1. Lowercase
+2. Strip non-alphanumeric characters (`-`, `(`, `)`, `/`, etc.) — replaced with spaces
+3. Collapse whitespace
+
+```
+"Stir-Fry Chicken"  →  "stir fry chicken"
+"Soup (Spicy)"      →  "soup spicy"
+"tomato paste"      →  "tomato paste"   (unchanged)
+```
+
+---
+
+### Two Data Structures Built at Training Time
+
+#### 1. `prefix_map: dict[str, list[str]]`
+Maps every **character prefix of each full phrase** to phrases that start with it.
+
+```
+phrase: "mango salsa"
+prefix_map keys added:
+  "m" → ["mango salsa", ...]
+  "ma" → ["mango salsa", ...]
+  ...
+  "mango sa" → ["mango salsa", "mango sauce"]
+  "mango sal" → ["mango salsa"]
+  "mango salsa" → ["mango salsa"]
+```
+
+**Strength:** fast, precise — matches phrases that literally start with the query string.
+**Weakness:** only matches from the START of the full phrase. `"mango sa"` will never find `"thai green mango salad"` because that phrase starts with `"thai"`, not `"mango"`.
+
+---
+
+#### 2. `word_index: dict[str, list[str]]`
+Maps every **individual word (stemmed)** to all phrases that contain it anywhere.
+
+```
+phrase: "thai green mango salad"
+word_index keys added (each word is stemmed before indexing):
+  stem("thai")  = "thai"  → ["thai green mango salad", "thai mango salsa", ...]
+  stem("green") = "green" → ["thai green mango salad", ...]
+  stem("mango") = "mango" → ["thai green mango salad", "mango salsa", "mango sauce", ...]
+  stem("salad") = "salad" → ["thai green mango salad", "pasta salad", ...]
+```
+
+Stemmed keys mean `"tomatoes"` and `"tomato"` both resolve to the same key `"tomato"`, so queries with either form find the same phrases.
+
+**Strength:** finds phrases that contain a word anywhere, not just at the start; stemming handles word-form variants.
+**Weakness:** less precise on its own — must be combined with a partial-word filter.
+
+---
+
+### Why Two Steps Are Needed — Concrete Example
+
+Suppose the index contains these phrases:
+```
+"mango salsa"
+"mango sauce"
+"thai green mango salad"
+```
+
+User types: **`"mango sa"`**
+
+#### Step 1 — `prefix_map["mango sa"]`
+```
+"mango sa" is a character prefix of:
+  "mango salsa"  ✅  (starts with "mango sa")
+  "mango sauce"  ✅  (starts with "mango sa")
+
+Result: ["mango salsa", "mango sauce"]
+```
+Step 1 finds the direct continuations — good. But `"thai green mango salad"` is missed entirely because it starts with `"thai"`, not `"mango"`.
+
+#### Step 3 — word-boundary lookup (always runs for multi-word queries, merged with Steps 1+2)
+```
+Query split:
+  complete_words = ["mango"]
+  partial        = "sa"
+
+word_index["mango"] = ["mango salsa", "mango sauce", "thai green mango salad"]
+
+Filter: keep only phrases where any word starts with "sa"
+  "mango salsa"           → "salsa" starts with "sa" ✅
+  "mango sauce"           → "sauce" starts with "sa" ✅
+  "thai green mango salad" → "salad" starts with "sa" ✅
+
+Result: ["mango salsa", "mango sauce", "thai green mango salad"]
+```
+
+#### Merged output (Step 1 first, Step 3 adds new entries)
+```
+["mango salsa", "mango sauce", "thai green mango salad"]
+```
+`"mango salsa"` and `"mango sauce"` rank first (exact prefix match = higher confidence).
+`"thai green mango salad"` follows as a word-level match.
+
+---
+
+### Full `suggest_phrases` Lookup Chain
+
+```
+Query: "tomatoes sa"
+│
+├── Step 1 — prefix_map["tomatoes sa"]
+│           → exact character prefix match (original query)
+│
+├── Step 2 — prefix_map[stem_all_but_last("tomatoes sa")]
+│           → prefix_map["tomato sa"]   (stems all complete words, keeps partial "sa")
+│           Always merged with Step 1 (not a fallback)
+│
+├── Step 3 — word_index[stem("tomato")] ∩ words-starting-"sa"   (multi-word queries always run this)
+│           → adds phrases containing "tomato" anywhere with a word starting "sa"
+│           Complete words are stemmed before word_index lookup
+│
+│   Merge: Steps 1+2 results first, Step 3 appends new entries (deduped)
+│
+└── Step 4 — trailing-slice fallback   (only if Steps 1–3 all returned empty)
+            try progressively shorter trailing slices of the query
+            e.g. "garlic tomato p" → try "tomato p" → ["tomato paste", "tomato puree"]
+```
+
+**Single-word queries** skip Step 3 (no complete words to intersect). Steps 1 and 2 (original and stemmed prefix) always run.
+
+---
+
+### Additional Example: Multiple Complete Words Narrow Results
+
+User types: **`"green mango sa"`**
+
+```
+Step 1: prefix_map["green mango sa"] → []   (no phrase starts with "green mango sa")
+
+Step 3: complete_words = ["green", "mango"],  partial = "sa"
+        word_index["green"] = ["thai green mango salad"]
+        word_index["mango"] = ["mango salsa", "mango sauce", "thai green mango salad"]
+        intersection        = ["thai green mango salad"]
+        filter words starting "sa": "salad" ✅
+        → ["thai green mango salad"]
+
+Result: ["thai green mango salad"]
+```
+
+Each complete word acts as an AND filter, narrowing results to only phrases that contain all specified words.
+

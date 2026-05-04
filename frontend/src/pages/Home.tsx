@@ -7,6 +7,7 @@ import { RecipeCard } from '../components/RecipeCard.tsx'
 import { SearchBar } from '../components/SearchBar.tsx'
 import { useSearch } from '../hooks/useSearch.ts'
 import { fetchCategories } from '../lib/api.ts'
+import type { CategoryInfo } from '../types/recipe.ts'
 
 interface HomeProps {
   activeFilters?: string[]

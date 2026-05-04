@@ -36,6 +36,8 @@ class IndexData:
     # For TF-IDF search
     ingredient_strings: list[str] = field(default_factory=list)
     recipe_ids: list[int] = field(default_factory=list)
+    # Popularity: recipe count per category
+    category_counts: dict[str, int] = field(default_factory=dict)
 
 
 def _parse_categories(row: pd.Series) -> list[str]:
@@ -126,16 +128,18 @@ def load_index() -> IndexData:
         ingredient_strings.append(ingredients_text)
         recipe_ids.append(recipe_id)
 
-    # Collect unique categories
-    all_categories: set[str] = set()
+    # Collect unique categories and count recipes per category
+    all_categories: dict[str, int] = {}
     for recipe in recipes.values():
-        all_categories.update(recipe.categories)
+        for cat in recipe.categories:
+            all_categories[cat] = all_categories.get(cat, 0) + 1
 
     data = IndexData(
         recipes=recipes,
-        categories=sorted(all_categories),
+        categories=sorted(all_categories.keys()),
         ingredient_strings=ingredient_strings,
         recipe_ids=recipe_ids,
+        category_counts=all_categories,
     )
 
     logger.info("Indexed %d recipes, %d categories", len(recipes), len(all_categories))

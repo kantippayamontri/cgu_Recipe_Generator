@@ -1,10 +1,28 @@
 """Search service: TF-IDF based recipe search with category filtering."""
 
 import logging
+import random
+import re
 
 import numpy as np
+from nltk.stem import SnowballStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+
+_stemmer = SnowballStemmer("english")
+
+
+def _stem_tokenize(text: str) -> list[str]:
+    """Tokenize and stem text for TF-IDF vectorization.
+
+    Args:
+        text: Raw text to tokenize.
+
+    Returns:
+        List of stemmed tokens.
+    """
+    tokens = re.findall(r"[a-z]+", text.lower())
+    return [_stemmer.stem(t) for t in tokens]
 
 from n_gram.loader import load_suggestion_documents
 from n_gram.model import NGramIndex
@@ -43,7 +61,8 @@ def _ensure_index() -> IndexData:
         for rid, ing_text in zip(data.recipe_ids, data.ingredient_strings)
     ]
     _tfidf_vectorizer = TfidfVectorizer(
-        lowercase=True,
+        tokenizer=_stem_tokenize,
+        token_pattern=None,  # required when tokenizer= is set
         stop_words="english",
         ngram_range=(1, 2),  # bigrams to capture simple phrase patterns
         max_features=10_000,
@@ -96,16 +115,20 @@ async def search_recipes(request: SearchRequest) -> SearchResponse:
     effective_limit = request.limit or 50
 
     if request.query.strip():
-        # TF-IDF search
+        # TF-IDF search — stem query to match stemmed corpus vocabulary
         assert _tfidf_vectorizer is not None  # noqa: S101
         assert _tfidf_matrix is not None  # noqa: S101
-        query_vector = _tfidf_vectorizer.transform([request.query])
+        stemmed_query = " ".join(_stem_tokenize(request.query))
+        query_vector = _tfidf_vectorizer.transform([stemmed_query])
         similarities = cosine_similarity(query_vector, _tfidf_matrix).flatten()
 
         # Rank by similarity score
         ranked_indices = np.argsort(similarities)[::-1]
 
         for idx in ranked_indices:
+            if similarities[idx] <= 0.0:
+                break  # sorted descending — all remaining are also 0
+
             recipe_id = data.recipe_ids[idx]
             recipe = data.recipes[recipe_id]
 
@@ -119,8 +142,10 @@ async def search_recipes(request: SearchRequest) -> SearchResponse:
             if len(results) >= effective_limit:
                 break
     else:
-        # No query: return all recipes, optionally filtered by categories
-        for recipe_id, recipe in data.recipes.items():
+        # No query: shuffle for variety on landing page
+        items = list(data.recipes.items())
+        random.shuffle(items)
+        for recipe_id, recipe in items:
             if request.filters and not any(
                 cat in request.filters for cat in recipe.categories
             ):
@@ -190,14 +215,18 @@ async def get_similar_recipes(recipe_id: int, limit: int = 3) -> list[RecipeResp
     return results
 
 
-async def get_categories() -> list[str]:
-    """Return all unique recipe categories.
+async def get_categories() -> list[tuple[str, int]]:
+    """Return all unique recipe categories sorted by popularity (recipe count desc).
 
     Returns:
-        Sorted list of category names.
+        List of (category_name, recipe_count) tuples, sorted most-recipe-heavy first.
     """
     data = _ensure_index()
-    return data.categories
+    categories_with_counts: list[tuple[str, int]] = [
+        (cat, data.category_counts.get(cat, 0)) for cat in data.categories
+    ]
+    categories_with_counts.sort(key=lambda x: x[1], reverse=True)
+    return categories_with_counts
 
 
 async def get_suggestions(query: str) -> list[str]:

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Query
 
-from server.schemas.search import SearchRequest, SearchResponse
+from server.schemas.search import CategoryInfo, SearchRequest, SearchResponse
 from server.services import search_service
 
 router = APIRouter()
@@ -32,10 +32,11 @@ async def suggestions(query: str = Query(default="")) -> list[str]:
 
 @router.get(
     "/categories",
-    response_model=list[str],
+    response_model=list[CategoryInfo],
     status_code=200,
-    summary="Get all recipe categories for filters",
+    summary="Get all recipe categories with counts for filters",
 )
-async def categories() -> list[str]:
-    """Return unique recipe categories."""
-    return await search_service.get_categories()
+async def categories() -> list[CategoryInfo]:
+    """Return unique recipe categories sorted by popularity (recipe count desc)."""
+    result = await search_service.get_categories()
+    return [CategoryInfo(name=name, count=count) for name, count in result]

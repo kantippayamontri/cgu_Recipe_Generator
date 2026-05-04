@@ -32,18 +32,20 @@ _ensure_index()  — called on every request, skips if already cached
 │       → IndexData { recipes, ingredient_strings, recipe_ids }
 │
 ├── Build TF-IDF matrix
-│       corpus[i] = title[i] + " " + ingredient_strings[i]
+│       corpus[i] = (title[i] × 3) + " " + ingredient_strings[i]
 │       TfidfVectorizer(
-│           lowercase=True, stop_words="english",
+│           tokenizer=_stem_tokenize,   ← SnowballStemmer("english")
+│           token_pattern=None,
+│           stop_words="english",
 │           ngram_range=(1,2), max_features=10_000
 │       ).fit_transform(corpus)
 │       → _tfidf_matrix  shape: (N_recipes × 10_000)
 │
 └── Build N-gram index (for autocomplete)
         load_suggestion_documents(data)
-            → titles + ingredient names, normalized lowercase
+            → recipe titles, normalized lowercase
         build_n_gram_index(docs)
-            → _ngram_index  (prefix → phrases map)
+            → _ngram_index  (prefix → phrases map, duplicates deduplicated by stem)
 ```
 
 ---
@@ -62,12 +64,14 @@ SearchRequest
 Has query text?
 │
 ├── YES → TF-IDF Search
-│         query_vector = vectorizer.transform([query])
-│         similarities = cosine_similarity(query_vector, _tfidf_matrix)
-│                        → array of shape (N_recipes,)
+│         stemmed_query = " ".join(_stem_tokenize(query))
+│         query_vector  = vectorizer.transform([stemmed_query])
+│         similarities  = cosine_similarity(query_vector, _tfidf_matrix)
+│                         → array of shape (N_recipes,)
 │         ranked_indices = argsort(similarities) descending
 │         │
 │         └── For each idx in ranked order:
+│               if similarities[idx] <= 0.0 → break  (no match)
 │               recipe = recipes[recipe_ids[idx]]
 │               if filters set → skip if recipe has no matching category
 │               → _recipe_to_response(recipe)
@@ -118,8 +122,23 @@ data.categories  → sorted list[str]  (pre-built in index_service)
 
 ```
 suggest_phrases(_ngram_index, query)
-prefix match "tom" → ["tomato", "tomato pasta", "tomato soup", ...]
-ranked: prefix matches first, then by frequency
+
+Step 1 — direct prefix match (original phrase prefixes)
+          prefix_map["tom"] → ["tomato", "tomato pasta", ...]
+
+Step 2 — stemmed-query fallback (if Step 1 empty)
+          stem all-but-last token: "tomatoes" → "tomato"
+          prefix_map["tomato"] → ["tomato", "tomato pasta", ...]
+
+Step 3 — word-boundary lookup (multi-word queries, always merged)
+          "mango sa" → complete=["mango"], partial="sa"
+          word_index["mango"] ∩ phrases-with-word-starting-"sa"
+          → ["thai green mango salad", "thai mango salsa"]
+
+Step 4 — trailing-slice fallback (last resort)
+          "garlic tomato p" → try "tomato p" → ["tomato paste", ...]
+
+Ranked: Step 1/2 results first, then Step 3, all by frequency desc.
 → list[str]
 ```
 
@@ -170,7 +189,10 @@ Converts the internal `Recipe` dataclass to the Pydantic `RecipeResponse` schema
 ## Key Design Points
 
 - **Lazy init** — index and matrices are built only on the first request; all subsequent calls reuse module-level globals.
+- **Stemmed TF-IDF** — both corpus and queries are tokenized through `_stem_tokenize` (SnowballStemmer), so `"tomato paste"` and `"tomatoes paste"` produce identical query vectors.
+- **Title boosting** — each recipe title is repeated 3× in the corpus string, giving title terms 3× the TF weight of ingredient terms.
+- **Zero-similarity guard** — results loop breaks immediately when `similarities[idx] <= 0.0`; no unrelated recipes are returned for queries with no vocabulary match.
 - **Two search modes** — TF-IDF cosine similarity when a query is present; insertion-order iteration when query is empty.
 - **Category filtering** — applied post-ranking for TF-IDF search and during iteration for browse mode.
 - **Similarity search** — uses the same TF-IDF matrix but compares a single recipe row against all others (doc-to-doc instead of query-to-doc).
-- **Autocomplete** — fully separate N-gram index; does not touch the TF-IDF matrix.
+- **Autocomplete** — fully separate N-gram index; does not touch the TF-IDF matrix. Inflected duplicates (e.g. `"tomatoes"`) are collapsed to the most-frequent canonical form at index-build time.

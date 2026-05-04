@@ -19,6 +19,7 @@ class NGramIndex:
     documents: list[NGramDocument] = field(default_factory=list)
     phrase_counts: dict[str, int] = field(default_factory=dict)
     prefix_map: dict[str, list[str]] = field(default_factory=dict)
+    word_index: dict[str, list[str]] = field(default_factory=dict)
 
     @property
     def document_count(self) -> int:
