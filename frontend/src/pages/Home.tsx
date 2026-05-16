@@ -1,13 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
-import heroImage from '../assets/hero.png'
+import heroImage from '../assets/kan_mascot.webp'
 import { FilterSidebar } from '../components/FilterSidebar.tsx'
 import { RecipeCard } from '../components/RecipeCard.tsx'
 import { SearchBar } from '../components/SearchBar.tsx'
 import { useSearch } from '../hooks/useSearch.ts'
 import { fetchCategories } from '../lib/api.ts'
-import type { CategoryInfo } from '../types/recipe.ts'
 
 interface HomeProps {
   activeFilters?: string[]
@@ -50,16 +49,12 @@ export function Home({ activeFilters = [] }: HomeProps) {
     <>
       <section className="mx-auto grid max-w-7xl gap-10 px-6 py-10 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-16">
         <div className="space-y-8">
-          <div className="inline-flex items-center rounded-full bg-secondary-container px-4 py-2 text-sm font-semibold text-secondary">
-            Mock-first culinary search experience
-          </div>
           <div className="space-y-5">
             <h1 className="max-w-2xl text-5xl font-extrabold tracking-[-0.04em] text-on-surface sm:text-6xl">
               Cook from what you crave, discover what you already have.
             </h1>
             <p className="max-w-xl text-lg leading-8 text-on-surface-variant">
-              Explore warm, editorial recipe cards inspired by Stitch while the
-              backend search experience is still mocked locally.
+              Tell us what you have, and we'll tell you what you can make.
             </p>
           </div>
 

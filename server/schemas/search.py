@@ -17,7 +17,7 @@ class SearchRequest(BaseModel):
 
     query: str = ""
     filters: list[str] = Field(default_factory=list)
-    limit: int | None = None
+    limit: int | None = Field(default=None, le=20)
 
 
 class SearchResponse(BaseModel):

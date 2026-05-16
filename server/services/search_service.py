@@ -112,7 +112,7 @@ async def search_recipes(request: SearchRequest) -> SearchResponse:
     """
     data = _ensure_index()
     results: list[RecipeResponse] = []
-    effective_limit = request.limit or 50
+    effective_limit = request.limit or 20
 
     if request.query.strip():
         # TF-IDF search — stem query to match stemmed corpus vocabulary

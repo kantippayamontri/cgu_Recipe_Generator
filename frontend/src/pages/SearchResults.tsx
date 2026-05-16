@@ -55,7 +55,7 @@ export function SearchResults() {
   const navigate = useNavigate()
   const query = searchParams.get('q') ?? ''
   const activeFilters = readFilters(searchParams.get('filters'))
-  const { data, isLoading } = useSearch({ query, filters: activeFilters })
+  const { data, isLoading, isFetching } = useSearch({ query, filters: activeFilters, limit: 20 })
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
@@ -87,9 +87,6 @@ export function SearchResults() {
               <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
                 {query ? `Results for "${query}"` : 'Browse all recipes'}
               </h1>
-              <p className="text-base text-on-surface-variant">
-                {recipes.length} recipes ranked by TF-IDF relevance.
-              </p>
             </div>
 
             <SearchBar key={query} initialQuery={query} onSearch={handleSearch} />
@@ -120,12 +117,12 @@ export function SearchResults() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {isLoading
+          {isLoading || isFetching
             ? Array.from({ length: 6 }, (_, index) => <LoadingCard key={index} />)
             : recipes.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} />)}
         </div>
 
-        {!isLoading && recipes.length === 0 ? (
+        {!isLoading && !isFetching && recipes.length === 0 ? (
           <section className="rounded-[2rem] bg-surface-container p-10 text-center">
             <h2 className="text-2xl font-extrabold tracking-tight">
               No recipes matched this search.

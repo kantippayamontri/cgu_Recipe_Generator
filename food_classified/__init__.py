@@ -1,1 +1,0 @@
-"""Food image classification module."""

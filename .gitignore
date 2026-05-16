@@ -1,3 +1,5 @@
+.context/
+.github/
 node_modules/*
 test_*
 .omx

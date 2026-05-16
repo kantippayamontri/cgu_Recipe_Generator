@@ -461,3 +461,602 @@ before reading any files directly.
 | Verify index is up to date | `codebase_status` |
 | Discover what project knowledge (schemas, specs, configs) is available | `codebase_context` |
 | Find database tables, API endpoints, infra configs | `codebase_context_search` |
+
+## Tools
+
+<!-- sigmap-tools -->
+
+```json
+[
+  {
+    "name": "sigmap_ask",
+    "description": "Rank source files by relevance to a natural-language query. Run before exploring the codebase.",
+    "command": "sigmap ask \"$QUERY\""
+  },
+  {
+    "name": "sigmap_validate",
+    "description": "Validate SigMap config and measure context coverage. Run after changing config or source dirs.",
+    "command": "sigmap validate"
+  },
+  {
+    "name": "sigmap_judge",
+    "description": "Score an LLM response for groundedness against source context. Use to verify answer quality.",
+    "command": "sigmap judge --response \"$RESPONSE\" --context \"$CONTEXT\""
+  },
+  {
+    "name": "sigmap_query",
+    "description": "Rank all files by relevance using TF-IDF and write a focused mini-context.",
+    "command": "sigmap --query \"$QUERY\" --context"
+  },
+  {
+    "name": "sigmap_weights",
+    "description": "Show learned file-ranking multipliers accumulated from past sessions.",
+    "command": "sigmap weights"
+  }
+]
+```
+
+## Auto-generated signatures
+<!-- Updated by gen-context.js -->
+# Code signatures
+
+## SigMap commands
+
+| When | Command |
+|------|---------|
+| Before answering a question | `sigmap ask "<your question>"` |
+| After code changes | `sigmap validate` |
+| To query by topic | `sigmap --query "<topic>"` |
+
+Always run `sigmap ask` or `sigmap --query` before searching for files relevant to a task.
+## deps
+```
+data_preprocessing/phase6_validation.py ← pandas
+data_preprocessing/full_preprocess.py ← data_preprocessing
+data_preprocessing/phase7_tfidf_preprocessing.py ← nltk, pandas
+frontend/src/App.tsx ← components/Footer, components/Navbar, pages/Home, pages/RecipeDetail, pages/SearchResults
+frontend/src/components/SearchBar.tsx ← hooks/useSuggestions
+frontend/src/hooks/useSearch.ts ← lib/api, types/recipe
+frontend/src/hooks/useSuggestions.ts ← lib/api
+frontend/src/lib/api.ts ← types/recipe
+frontend/src/pages/RecipeDetail.tsx ← components/RecipeCard, lib/api
+frontend/src/components/Navbar.tsx ← assets/logo
+frontend/src/components/RecipeCard.tsx ← types/recipe
+frontend/src/components/FilterSidebar.tsx ← types/recipe
+frontend/src/pages/SearchResults.tsx ← components/FilterSidebar, components/RecipeCard, components/SearchBar, hooks/useSearch, lib/api
+frontend/src/pages/Home.tsx ← assets/kan_mascot, components/FilterSidebar, components/RecipeCard, components/SearchBar, hooks/useSearch
+data_collection/fetcher.py ← config, pandas, requests
+tf_idf/__main__.py ← __future__, tf_idf, pandas
+tf_idf/indexer.py ← __future__, scipy, sklearn, tf_idf
+tf_idf/loader.py ← pandas
+tf_idf/searcher.py ← __future__, sklearn, tf_idf
+tf_idf/similarity.py ← __future__, sklearn, tf_idf
+server/main.py ← fastapi, server
+server/routes/search.py ← fastapi, server
+server/routes/recipes.py ← fastapi, server
+server/services/index_service.py ← pandas, config
+server/schemas/recipe.py ← pydantic
+server/schemas/search.py ← pydantic, server
+server/services/search_service.py ← nltk, sklearn, n_gram, server, numpy
+n_gram/__main__.py ← __future__, n_gram, server
+n_gram/loader.py ← __future__, n_gram, server
+n_gram/model.py ← __future__
+n_gram/suggester.py ← __future__, nltk, n_gram
+n_gram/trainer.py ← __future__, nltk, n_gram
+```
+
+## changes (last 10 commits — 5 days ago)
+```
+frontend/src/components/RecipeCard.tsx        ~RecipeCard
+frontend/src/components/FilterSidebar.tsx     ~FilterSidebar
+frontend/src/pages/SearchResults.tsx          ~SearchResults
+data_collection/fetcher.py                    +import  +RandomQueryParams  +random_query  +random_ingredient_query
+tf_idf/__main__.py                            +demo_search  +demo_similarity  +main
+tf_idf/TF_TDF_SUMMARY.md                      +and  +TfidfDocument  +load_tfidf_documents  +TfidfIndex
+tf_idf/indexer.py                             ~build_tfidf_index
+tf_idf/loader.py                              ~load_tfidf_documents
+tf_idf/searcher.py                            ~search_documents
+tf_idf/similarity.py                          ~find_similar_documents
+server/SEARCH_SERVICE_FLOW_SUMMARY.md         +to
+server/main.py                                +health
+server/routes/search.py                       +search  +suggestions  +categories
+server/routes/recipes.py                      +get_recipe  +get_similar
+server/services/index_service.py              +Recipe  +IndexData  +_parse_categories  +_parse_json_list
+server/schemas/recipe.py                      +IngredientResponse  +InstructionResponse  +RecipeResponse
+server/schemas/search.py                      +CategoryInfo  +SearchRequest  +SearchResponse
+server/services/search_service.py             +_stem_tokenize  +_ensure_index  +_recipe_to_response  +to
+n_gram/__main__.py                            +run_query  +run_interactive
+n_gram/loader.py                              +_normalize_phrase  +load_suggestion_documents
+n_gram/N_GRAM_SUMMARY.md                      +for  +holding  +NGramDocument  +NGramIndex
+n_gram/model.py                               +NGramDocument  +NGramIndex  +document_count
+n_gram/suggester.py                           +_normalize_query  +_stem_all_but_last  +_word_boundary_lookup  +suggest_phrases
+n_gram/trainer.py                             +_stem_phrase  +_prefixes  +build_n_gram_index
+```
+
+## data_collection
+
+### data_collection/README.md
+```
+h1 Data Collection Module Documentation
+h2 Overview
+h2 Installation & Setup
+h2 Usage
+h3 Basic Pagination Mode
+h3 Random Mode
+h3 Query-Based Search
+h1 Search by ingredient or dish name
+h1 Filter by cuisine
+h1 Filter by dish type
+h1 Combined search
+h1 Sort by rating instead of popularity
+h1 Italian main courses
+h1 Chicken dishes sorted by rating
+h1 Desserts with chocolate
+h3 Command-Line Options
+h2 API Parameters
+h3 Query Parameter
+h3 Cuisine Parameter
+h3 Dish Type Parameter
+h3 Sort Parameter
+h2 Output Format
+h2 Features
+h3 Duplicate Detection
+h3 Rate Limiting
+```
+
+### data_collection/fetcher.py
+```
+@dataclass RandomQueryParams(query, sort)
+def random_query() → RandomQueryParams  # Randomly select a query term and sort order
+def random_ingredient_query() → RandomQueryParams  # Randomly select a single ingredient as the search query
+def get_cached_data(CACHE_FILE) → list
+def get_nrows_in_csv(file_path)
+def get_unique_recipe_count(file_path)  # Get count of unique recipe_ids in the CSV
+def process_recipes_master(recipes: list)  # Process and save recipes to CSV
+def get_existing_recipe_ids(file_path)  # Get set of existing recipe IDs to avoid duplicates
+def fetch_recipes_dataset(query: str | None, cuisine: str | None, dish_type: str | None, sort: str) → None  # Fetch recipes using pagination or query-based search
+```
+
+## data_preprocessing
+
+### data_preprocessing/phase6_validation.py
+```
+@dataclass Anomaly(recipe_id, title, errors)
+@dataclass ValidationStats(total_records, valid_records, anomaly_records, duplicate_ids, empty_titles, invalid_ingredients_json, invalid_instructions_json, non_numeric_quantities, empty_instruction_steps, zero_ingredients, zero_steps, total_ingredients, total_steps, with_temperatures, with_times, with_equipment, with_cuisine, with_category, with_prep_time, with_cook_time, with_servings)
+def load_data() → pd.DataFrame  # Load the processed CSV from Phase 5
+def validate_ingredients_json(row: pd.Series) → list[str]  # Validate the ingredients JSON column
+def validate_instructions_json(row: pd.Series) → list[str]  # Validate the instructions JSON column
+def validate_row(row: pd.Series) → list[str]  # Run all validations on a single row
+def audit_dataset(df: pd.DataFrame) → tuple[pd.DataFrame, list[An...  # Run full audit on the dataset
+def save_clean_csv(clean_df: pd.DataFrame) → None  # Save the validated clean dataset
+def save_anomaly_log(anomalies: list[Anomaly]) → None  # Save anomaly log file
+def save_summary_report(stats: ValidationStats, anomalies: list[Anomaly]) → None  # Save comprehensive Markdown quality report
+def save_sample_review(clean_df: pd.DataFrame) → None  # Save sample review with 15 random recipes in Markdown
+def main() → None  # Run Phase 6 validation & quality control
+```
+
+### data_preprocessing/full_preprocess.py
+```
+def parse_args() → argparse.Namespace  # Parse command-line arguments
+def run_pipeline(start: int, end: int) → None  # Execute preprocessing phases sequentially
+def main() → None  # Entry point for the full preprocessing pipeline
+```
+
+### data_preprocessing/PREPROCESS_PLAN.md
+```
+h1 Recipe Data Preprocessing Plan
+h2 Overview
+h2 Phase 1: Data Assessment & Exploration
+h3 Objectives
+h3 Tasks
+h3 Expected Output
+h2 Phase 2: Text Extraction & Cleaning
+h3 Data Structure
+h3 Cleaning Steps
+h4 Step 2.1: Filter Relevant Schema Types
+h4 Step 2.2: Extract Recipe Fields
+h4 Step 2.3: Clean Text Content
+h2 Phase 3: Ingredient Parsing
+h3 Input Format
+h3 Parsing Tasks
+h4 Step 3.1: Extract Components
+h4 Step 3.2: Unit Normalization
+h4 Step 3.3: Ingredient Name Cleaning
+h2 Phase 4: Instruction Processing
+h3 Input Formats
+h3 Processing Steps
+h4 Step 4.1: Extract Instruction Text
+h4 Step 4.2: Clean Instructions
+h4 Step 4.3: Extract Metadata from Instructions
+h2 Phase 5: Structured Output Generation
+```
+
+### data_preprocessing/phase7_tfidf_preprocessing.py
+```
+class TextPreprocessor
+  def __init__() → None
+  def preprocess_ingredient(name: str) → str
+  def preprocess_instruction(text: str, remove_numbers: bool) → str
+def ensure_nltk_data() → None  # Ensure required NLTK data is downloaded
+def load_data() → pd.DataFrame  # Load the validated CSV from Phase 6
+def process_recipe_ingredients(row: pd.Series, preprocessor: TextPreprocessor) → dict[str, Any]  # Process ingredients for a single recipe
+def process_recipe_instructions(row: pd.Series, preprocessor: TextPreprocessor) → dict[str, Any]  # Process instructions for a single recipe
+def process_all_recipes(df: pd.DataFrame) → tuple[pd.DataFrame, dict[st...  # Process all recipes for TF-IDF
+def save_tfidf_csv(df: pd.DataFrame) → None  # Save TF-IDF ready dataset to CSV
+def save_json_files(df: pd.DataFrame) → None  # Save preprocessed ingredients and instructions as JSON files
+def get_sample_comparisons(df: pd.DataFrame) → tuple[list[tuple], list[tup...  # Get actual before/after samples from the data
+def generate_report(df: pd.DataFrame, stats: dict[str, Any]) → str  # Generate Markdown report
+def save_report(report: str) → None  # Save Markdown report
+def main() → None  # Run Phase 7 TF-IDF preprocessing
+```
+
+### data_preprocessing/PREPROCESS_SUMMARY.md
+```
+h1 Recipe Data Preprocessing — Full Summary
+h2 Pipeline at a Glance
+h2 Phase 1 — Data Assessment & Exploration
+h3 Purpose
+h3 What each JSON file contains
+h3 Step-by-step
+h2 Phase 2 — Text Extraction & Cleaning
+h2 Phase 3 — Ingredient Parsing
+h2 Phase 4 — Instruction Processing
+h2 Phase 5 — Structured Output Generation
+h2 Phase 6 — Validation & Quality Control
+h2 Phase 7 — TF-IDF Preprocessing
+h3 NLTK dependencies
+h3 Ingredient preprocessing (`preprocess_ingredient()`)
+h3 Instruction preprocessing (`preprocess_instruction()`)
+h3 Combined TF-IDF text field
+h3 Vocabulary statistics
+h3 Downstream usage
+h1 Shape: (n_recipes × n_features)
+h2 Data Flow Summary
+h2 Output File Reference
+code-fence plain
+code-fence bash
+code-fence ---
+code-fence json
+```
+
+## frontend
+
+### frontend/README.md
+```
+h1 React + TypeScript + Vite
+h2 React Compiler
+h2 Expanding the ESLint configuration
+code-fence js
+code-fence plain
+```
+
+### frontend/src/App.tsx
+```
+component App
+export App
+```
+
+### frontend/src/components/SearchBar.tsx
+```
+component SearchBar
+props SearchBarProps
+hook useState
+hook useSuggestions
+export SearchBar
+handler onSubmit
+handler onChange
+handler onMouseDown
+```
+
+### frontend/src/hooks/useSearch.ts
+```
+export function useSearch(request)
+```
+
+### frontend/src/hooks/useSuggestions.ts
+```
+export function useSuggestions(query)
+```
+
+### frontend/src/lib/api.ts
+```
+export async function searchRecipes(request,) → Promise<SearchResponse>
+export async function fetchSuggestions(query) → Promise<string[]>
+export async function fetchCategories() → Promise<CategoryInfo[]>
+export async function fetchRecipeById(id) → Promise<Recipe | undefined>
+export async function fetchSimilarRecipes(id) → Promise<Recipe[]>
+```
+
+### frontend/src/pages/RecipeDetail.tsx
+```
+component RecipeDetail
+hook useParams
+hook useState
+hook useEffect
+hook useQuery
+export RecipeDetail
+```
+
+### frontend/src/components/Navbar.tsx
+```
+component Navbar
+export Navbar
+```
+
+### frontend/index.html
+```
+title: Bite-Sized Magic
+div#root
+```
+
+### frontend/src/components/Footer.tsx
+```
+component Footer
+export Footer
+```
+
+### frontend/src/components/RecipeCard.tsx
+```
+component RecipeCard
+props RecipeCardProps
+hook useState
+hook useEffect
+export RecipeCard
+```
+
+### frontend/src/components/FilterSidebar.tsx
+```
+component FilterSidebar
+props FilterSidebarProps
+export FilterSidebar
+```
+
+### frontend/src/pages/SearchResults.tsx
+```
+component LoadingCard
+component SearchResults
+hook useSearchParams
+hook useNavigate
+hook useSearch
+hook useQuery
+export SearchResults
+handler onSearch
+handler onChange
+```
+
+### frontend/src/pages/Home.tsx
+```
+component Home
+props HomeProps
+hook useNavigate
+hook useSearch
+hook useQuery
+export Home
+handler onSearch
+handler onChange
+```
+
+### frontend/src/types/recipe.ts
+```
+export interface Ingredient
+export interface Instruction
+export interface Recipe
+export interface CategoryInfo
+export interface SearchRequest
+export interface SearchResponse
+```
+
+## n_gram
+
+### n_gram/__main__.py
+```
+def run_query(query: str, limit: int) → None  # Load the index and print suggestions for a single query
+def run_interactive(limit: int) → None  # Load the index once, then run a REPL for interactive queries
+```
+
+### n_gram/loader.py
+```
+def load_suggestion_documents(data: IndexData) → list[NGramDocument]  # Extract title and ingredient phrases for autocomplete traini
+```
+
+### n_gram/N_GRAM_SUMMARY.md
+```
+h1 N-Gram Autocomplete Implementation Summary
+h2 Overview
+h2 Implementation Steps
+h3 Step 1: Create the N-Gram Data Model (`model.py`)
+h3 Step 2: Build the Training Phrase Loader (`loader.py`)
+h3 Step 3: Train the Prefix Index (`trainer.py`)
+h3 Step 4: Implement Suggestion Ranking (`suggester.py`)
+h3 Step 5: Backend Integration (`search_service.py`)
+h1 Module-level cache
+h2 File Structure
+h2 API Reference
+h3 `model.py`
+h3 `loader.py`
+h3 `trainer.py`
+h3 `suggester.py`
+h2 Data Flow
+h2 Training Data
+h2 Behavior
+h2 Integration Points
+h2 Performance Characteristics
+h2 Testing Strategy
+h2 Git Commits
+h2 Future Enhancements
+h2 Lessons Learned
+h2 Running the Feature
+```
+
+### n_gram/model.py
+```
+@dataclass NGramDocument(text, source)
+@dataclass NGramIndex(documents, phrase_counts, prefix_map, word_index)
+```
+
+### n_gram/suggester.py
+```
+def suggest_phrases(index: NGramIndex, query: str, limit: int) → list[str]
+```
+
+### n_gram/trainer.py
+```
+def build_n_gram_index(documents: list[NGramDocument]) → NGramIndex  # Build prefix lookup data for autocomplete
+```
+
+## server
+
+### server/INDEX_SERVICE_FLOW_SUMMARY.md
+```
+h1 Index Service Flow Summary
+h2 Overview
+h2 Data Structures
+h3 `Recipe` (frozen dataclass)
+h3 `IndexData` (dataclass)
+h2 `load_index()` Flow
+h2 Helper Functions
+h2 Key Design Points
+h2 Autocomplete Suggestion System
+h3 Phrase Normalization (`n_gram/loader.py`)
+h3 Two Data Structures Built at Training Time
+h4 1. `prefix_map: dict[str, list[str]]`
+h4 2. `word_index: dict[str, list[str]]`
+h3 Why Two Steps Are Needed — Concrete Example
+h4 Step 1 — `prefix_map["mango sa"]`
+h4 Step 3 — word-boundary lookup (always runs for multi-word queries, merged with Steps 1+2)
+h4 Merged output (Step 1 first, Step 3 adds new entries)
+h3 Full `suggest_phrases` Lookup Chain
+h3 Additional Example: Multiple Complete Words Narrow Results
+code-fence plain
+code-fence ---
+```
+
+### server/SEARCH_SERVICE_FLOW_SUMMARY.md
+```
+h1 Search Service Flow Summary
+h2 Overview
+h2 Module-Level Cache (Globals)
+h2 Initialization Flow (`_ensure_index`)
+h2 Per-Request Flows
+h3 `search_recipes(SearchRequest) → SearchResponse`
+h3 `get_recipe(recipe_id) → RecipeResponse | None`
+h3 `get_similar_recipes(recipe_id, limit) → list[RecipeResponse]`
+h3 `get_categories() → list[str]`
+h3 `get_suggestions(query) → list[str]`
+h2 How the Pieces Connect
+h2 `_recipe_to_response` Conversion
+h2 Key Design Points
+code-fence plain
+code-fence ---
+code-fence searchrequest
+```
+
+### server/main.py
+```
+async def health() → dict[str, str]  # Health check endpoint
+GET /api/v1/health  →  health()
+```
+
+### server/routes/search.py
+```
+async def search(request: SearchRequest) → SearchResponse  # Search recipes using TF-IDF similarity
+async def categories() → list[CategoryInfo]  # Return unique recipe categories sorted by popularity (recipe
+```
+
+### server/routes/recipes.py
+```
+async def get_recipe(recipe_id: int) → RecipeResponse  # Fetch recipe details
+async def get_similar(recipe_id: int) → list[RecipeResponse]  # Return recipes similar to the given recipe using TF-IDF
+```
+
+### server/services/index_service.py
+```
+@dataclass Recipe(id, title, description, image, categories, cook_time_minutes, servings, ingredients, instructions, ingredients_text)
+@dataclass IndexData(recipes, categories, ingredient_strings, recipe_ids, category_counts)
+def load_index() → IndexData  # Load all recipes from CSV and build search indices
+```
+
+### server/schemas/recipe.py
+```
+class IngredientResponse(BaseModel) {name*, amount*}
+class InstructionResponse(BaseModel) {step*, description*}
+class RecipeResponse(BaseModel) {id*, title*, description*, image*, categories*, cookTimeMinutes*}
+```
+
+### server/schemas/search.py
+```
+class CategoryInfo(BaseModel) {name*, count*}
+class SearchRequest(BaseModel) {query?, filters?, limit?}
+class SearchResponse(BaseModel) {query*, total*, recipes*}
+```
+
+### server/services/search_service.py
+```
+async def search_recipes(request: SearchRequest) → SearchResponse  # Search recipes using TF-IDF and filter by categories
+async def get_recipe(recipe_id: int) → RecipeResponse | None  # Fetch a single recipe by ID
+async def get_similar_recipes(recipe_id: int, limit: int) → list[RecipeResponse]  # Find recipes similar to the given recipe using TF-IDF cosine
+async def get_categories() → list[tuple[str, int]]  # Return all unique recipe categories sorted by popularity (re
+async def get_suggestions(query: str) → list[str]  # Return autocomplete suggestions using n-gram prefix matching
+```
+
+## tf_idf
+
+### tf_idf/__main__.py
+```
+def demo_search(csv_path: Path, query: str, limit: int) → None  # Run a search query and display results with comparison
+def demo_similarity(csv_path: Path, recipe_id: int, limit: int) → None  # Find similar recipes to a given recipe
+def main() → None  # Run TF-IDF demo based on command-line arguments
+```
+
+### tf_idf/TF_TDF_SUMMARY.md
+```
+h1 TF-IDF Module Implementation Summary
+h2 Overview
+h2 Implementation Steps
+h3 Step 1: Define Loader Contract (`loader.py`)
+h3 Step 2: Build Hybrid Indexing Layer (`indexer.py`)
+h3 Step 3: Add Query Search Workflow (`searcher.py`)
+h3 Step 4: Add Recipe Similarity Workflow (`similarity.py`)
+h3 Step 5: Expose Package API (`__init__.py`)
+h3 Step 6: Add Demo Comparison Flow (`__main__.py`)
+h1 Search for recipes
+h1 Find similar recipes
+h1 Custom CSV path
+h2 File Structure
+h2 API Reference
+h3 `loader.py`
+h3 `indexer.py`
+h3 `searcher.py`
+h3 `similarity.py`
+h2 Testing
+h2 Quality Checks
+h2 Dependencies
+h2 Data Flow
+h2 Input Vector Difference (Search vs Similarity)
+h2 Comparison with Backend
+h2 Future Enhancements (Not Implemented)
+```
+
+### tf_idf/indexer.py
+```
+@dataclass TfidfIndex(recipe_ids, documents, vectorizer, matrix, feature_names)
+def build_tfidf_index(documents: list[TfidfDocument]) → TfidfIndex  # Build a TF-IDF index from recipe documents
+```
+
+### tf_idf/loader.py
+```
+@dataclass TfidfDocument(recipe_id, text)
+def load_tfidf_documents(csv_path: Path) → list[TfidfDocument]  # Load TF-IDF-ready recipe documents from a CSV file
+```
+
+### tf_idf/searcher.py
+```
+@dataclass SearchResult(recipe_id, score)
+def search_documents(index: TfidfIndex, query: str, limit: int) → list[SearchResult]  # Search indexed recipe documents by TF-IDF cosine similarity
+```
+
+### tf_idf/similarity.py
+```
+@dataclass SimilarRecipe(recipe_id, score)
+def find_similar_documents(index: TfidfIndex, recipe_id: int, limit: int) → list[SimilarRecipe]  # Find recipes similar to a source recipe
+```

@@ -1,8 +1,0 @@
-"""Shared paths for the food classification module."""
-from pathlib import Path
-
-FOOD_CLASSIFIED_DATA_DIR = Path("data/food_classified")
-FOOD_CLASSIFIED_RAW_DIR = FOOD_CLASSIFIED_DATA_DIR / "raw"
-FOOD_CLASSIFIED_CACHE_DIR = FOOD_CLASSIFIED_DATA_DIR / "cache"
-FOOD_CLASSIFIED_PROCESSED_DIR = FOOD_CLASSIFIED_DATA_DIR / "processed"
-FOOD_CLASSIFIED_ARTIFACTS_DIR = FOOD_CLASSIFIED_DATA_DIR / "artifacts"

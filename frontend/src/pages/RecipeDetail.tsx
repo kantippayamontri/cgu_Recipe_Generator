@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 
@@ -9,6 +9,14 @@ export function RecipeDetail() {
   const { id } = useParams<{ id: string }>()
   const recipeId = Number(id)
   const [checkedIngredients, setCheckedIngredients] = useState<string[]>([])
+  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setImageStatus((s) => (s === 'loading' ? 'error' : s))
+    }, 5000)
+    return () => clearTimeout(timer)
+  }, [])
   const { data: recipe, isLoading } = useQuery({
     queryKey: ['recipe', recipeId],
     queryFn: () => fetchRecipeById(recipeId),
@@ -95,11 +103,18 @@ export function RecipeDetail() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-[2rem] bg-surface-container p-4 shadow-[0_30px_100px_-60px_rgba(59,57,13,0.75)]">
+        <div className="relative overflow-hidden rounded-[2rem] bg-surface-container p-4 shadow-[0_30px_100px_-60px_rgba(59,57,13,0.75)]">
+          {imageStatus === 'loading' && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-outline-variant border-t-primary" />
+            </div>
+          )}
           <img
-            src={recipe.image}
+            src={imageStatus === 'error' ? 'https://img.magnific.com/premium-vector/file-folder-mascot-character-design-vector_166742-4413.jpg?semt=ais_hybrid&w=740&q=80' : recipe.image}
             alt={recipe.title}
-            className="h-full min-h-[320px] w-full rounded-[1.5rem] object-cover"
+            onLoad={() => setImageStatus((s) => (s === 'error' ? 'error' : 'loaded'))}
+            onError={() => setImageStatus('error')}
+            className={`h-full min-h-[320px] w-full rounded-[1.5rem] object-cover transition duration-500 ${imageStatus === 'loading' ? 'invisible' : ''}`}
           />
         </div>
       </section>

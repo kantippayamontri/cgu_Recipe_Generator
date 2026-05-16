@@ -1,16 +1,15 @@
 import { Link } from 'react-router-dom'
+import logo from '../assets/logo.webp'
 
 export function Navbar() {
   return (
     <header className="sticky top-0 z-30 border-b border-outline-variant/40 bg-surface/90 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 sm:px-8 lg:px-10">
         <Link to="/" className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-lg font-extrabold text-surface">
-            CG
-          </span>
+          <img src={logo} alt="Bite-Sized Magic" className="h-24 w-24 rounded-full object-cover shadow-[0_12px_30px_-15px_rgba(157,79,0,0.5)]" />
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-secondary">
-              Culinary Gallery
+            <p className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-base font-extrabold uppercase tracking-[0.20em] text-transparent">
+              Bite-Sized Magic
             </p>
             <p className="text-sm text-on-surface-variant">
               Discover recipe ideas from your pantry
