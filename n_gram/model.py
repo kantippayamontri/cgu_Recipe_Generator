@@ -12,6 +12,14 @@ class NGramDocument:
     source: str
 
 
+@dataclass(frozen=True)
+class Suggestion:
+    """Autocomplete suggestion with source label."""
+
+    text: str
+    source: str
+
+
 @dataclass
 class NGramIndex:
     """In-memory n-gram suggestion index."""
@@ -20,6 +28,7 @@ class NGramIndex:
     phrase_counts: dict[str, int] = field(default_factory=dict)
     prefix_map: dict[str, list[str]] = field(default_factory=dict)
     word_index: dict[str, list[str]] = field(default_factory=dict)
+    phrase_sources: dict[str, list[str]] = field(default_factory=dict)
 
     @property
     def document_count(self) -> int:

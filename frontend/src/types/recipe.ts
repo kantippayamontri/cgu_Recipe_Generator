@@ -36,3 +36,8 @@ export interface SearchResponse {
   total: number
   recipes: Recipe[]
 }
+
+export interface SearchSuggestion {
+  text: string
+  source: string
+}

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from nltk.stem import SnowballStemmer
 
-from n_gram.model import NGramIndex
+from n_gram.model import NGramIndex, Suggestion
 
 _stemmer = SnowballStemmer("english")
 
@@ -66,15 +66,16 @@ def _word_boundary_lookup(
     return sorted(candidates, key=lambda p: (-index.phrase_counts[p], p))
 
 
-def suggest_phrases(index: NGramIndex, query: str, limit: int = 15) -> list[str]:
-    """Return ranked autocomplete suggestions.
+def suggest_phrases(
+    index: NGramIndex, query: str, limit: int = 15
+) -> list[Suggestion]:
+    """Return ranked autocomplete suggestions with source labels.
 
     Lookup strategy:
     1. Direct character-prefix match in prefix_map (original phrase prefixes).
     2. Stemmed-query fallback: stem all-but-last token and retry prefix_map.
-       Handles "tomatoes" → looks up "tomato" and finds "tomato paste" etc.
-    3. For multi-word queries: word-boundary lookup (always merged with Step 1/2).
-    4. Trailing-slice fallback when all above are empty.
+    3. For single-word queries: also scan all phrases for word-boundary matches.
+    4. For multi-word queries: word-boundary lookup + trailing-slice fallback.
 
     Args:
         index: Trained n-gram index.
@@ -82,7 +83,7 @@ def suggest_phrases(index: NGramIndex, query: str, limit: int = 15) -> list[str]
         limit: Maximum suggestions to return.
 
     Returns:
-        Ranked suggestion strings.
+        Ranked suggestion objects with text and source fields.
     """
     normalized_query = _normalize_query(query)
     if not normalized_query:
@@ -90,7 +91,13 @@ def suggest_phrases(index: NGramIndex, query: str, limit: int = 15) -> list[str]
             index.phrase_counts,
             key=lambda phrase: (-index.phrase_counts[phrase], phrase),
         )
-        return ranked[:limit]
+        return [
+            Suggestion(
+                text=phrase,
+                source=", ".join(index.phrase_sources.get(phrase, [])),
+            )
+            for phrase in ranked[:limit]
+        ]
 
     words = normalized_query.split()
 
@@ -106,11 +113,12 @@ def suggest_phrases(index: NGramIndex, query: str, limit: int = 15) -> list[str]
                 prefix_matches.append(phrase)
                 seen.add(phrase)
 
+    seen: set[str] = set(prefix_matches)
+    matches: list[str] = list(prefix_matches)
+
     if len(words) >= 2:
-        # Step 3: word-boundary lookup — always run and merge for multi-word queries
+        # Step 3: word-boundary lookup for multi-word queries
         boundary_matches = _word_boundary_lookup(index, words[:-1], words[-1])
-        seen: set[str] = set(prefix_matches)
-        matches: list[str] = list(prefix_matches)
         for phrase in boundary_matches:
             if phrase not in seen:
                 matches.append(phrase)
@@ -126,6 +134,23 @@ def suggest_phrases(index: NGramIndex, query: str, limit: int = 15) -> list[str]
                 if matches:
                     break
     else:
-        matches = prefix_matches
+        # Single word: also scan for word-boundary matches, not just prefixes
+        # e.g. "taco" → "chicken taco soup", "instant pot chicken tacos"
+        boundary_phrases: list[tuple[str, int]] = []
+        for phrase, count in index.phrase_counts.items():
+            if phrase in seen:
+                continue
+            if any(w.startswith(normalized_query) for w in phrase.split()):
+                boundary_phrases.append((phrase, count))
+        boundary_phrases.sort(key=lambda x: (-x[1], x[0]))
+        for phrase, _ in boundary_phrases:
+            matches.append(phrase)
+            seen.add(phrase)
 
-    return matches[:limit]
+    return [
+        Suggestion(
+            text=phrase,
+            source=", ".join(index.phrase_sources.get(phrase, [])),
+        )
+        for phrase in matches[:limit]
+    ]

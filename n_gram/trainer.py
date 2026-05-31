@@ -42,16 +42,23 @@ def build_n_gram_index(documents: list[NGramDocument]) -> NGramIndex:
     """
     phrase_counts = Counter(document.text for document in documents)
 
+    # Track which source types each phrase came from (title, ingredient)
+    source_map: dict[str, set[str]] = defaultdict(set)
+    for document in documents:
+        source_map[document.text].add(document.source)
+
     # Deduplicate: for each unique stemmed form keep the most-frequent original.
     # phrase_counts.most_common() iterates highest-count first, so the first
     # original seen for a stemmed key wins.
     stemmed_seen: dict[str, str] = {}
     surviving: dict[str, int] = {}
+    phrase_sources: dict[str, list[str]] = {}
     for phrase, count in phrase_counts.most_common():
         stemmed = _stem_phrase(phrase)
         if stemmed not in stemmed_seen:
             stemmed_seen[stemmed] = phrase
             surviving[phrase] = count
+            phrase_sources[phrase] = sorted(source_map.get(phrase, set()))
 
     # Build prefix_map from original phrase text so partial-word queries
     # (e.g. "frie" → "fried chicken") continue to work without regression.
@@ -81,4 +88,5 @@ def build_n_gram_index(documents: list[NGramDocument]) -> NGramIndex:
         phrase_counts=dict(surviving),
         prefix_map=dict(prefix_map),
         word_index=dict(word_index),
+        phrase_sources=phrase_sources,
     )

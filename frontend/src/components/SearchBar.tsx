@@ -58,18 +58,18 @@ export function SearchBar({
         <div className="absolute inset-x-0 top-[calc(100%+0.75rem)] z-20 overflow-hidden rounded-[1.75rem] bg-surface shadow-[0_24px_80px_-35px_rgba(59,57,13,0.45)] ring-1 ring-outline-variant/40">
           {suggestions.slice(0, 5).map((suggestion) => (
             <button
-              key={suggestion}
+              key={suggestion.text}
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => {
-                setQuery(suggestion)
-                submitSearch(suggestion)
+                setQuery(suggestion.text)
+                submitSearch(suggestion.text)
               }}
               className="flex w-full items-center justify-between px-5 py-4 text-left text-sm text-on-surface transition hover:bg-surface-container-low"
             >
-              <span>{suggestion}</span>
-              <span className="material-symbols-outlined text-on-surface-variant">
-                north_west
+              <span className="truncate">{suggestion.text}</span>
+              <span className="ml-2 shrink-0 rounded-full bg-surface-container-highest px-2 py-0.5 text-xs font-medium text-on-surface-variant">
+                {suggestion.source}
               </span>
             </button>
           ))}

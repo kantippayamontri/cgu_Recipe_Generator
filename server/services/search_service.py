@@ -25,7 +25,7 @@ def _stem_tokenize(text: str) -> list[str]:
     return [_stemmer.stem(t) for t in tokens]
 
 from n_gram.loader import load_suggestion_documents
-from n_gram.model import NGramIndex
+from n_gram.model import NGramIndex, Suggestion
 from n_gram.suggester import suggest_phrases
 from n_gram.trainer import build_n_gram_index
 from server.schemas.recipe import (
@@ -118,8 +118,7 @@ async def search_recipes(request: SearchRequest) -> SearchResponse:
         # TF-IDF search — stem query to match stemmed corpus vocabulary
         assert _tfidf_vectorizer is not None  # noqa: S101
         assert _tfidf_matrix is not None  # noqa: S101
-        stemmed_query = " ".join(_stem_tokenize(request.query))
-        query_vector = _tfidf_vectorizer.transform([stemmed_query])
+        query_vector = _tfidf_vectorizer.transform([request.query])
         similarities = cosine_similarity(query_vector, _tfidf_matrix).flatten()
 
         # Rank by similarity score
@@ -229,14 +228,14 @@ async def get_categories() -> list[tuple[str, int]]:
     return categories_with_counts
 
 
-async def get_suggestions(query: str) -> list[str]:
+async def get_suggestions(query: str) -> list[Suggestion]:
     """Return autocomplete suggestions using n-gram prefix matching.
 
     Args:
         query: Partial search text from the user.
 
     Returns:
-        List of matching suggestion strings ranked by frequency then alphabetically.
+        List of Suggestion objects with text and source (title/ingredient).
     """
     _ensure_index()
     assert _ngram_index is not None  # noqa: S101

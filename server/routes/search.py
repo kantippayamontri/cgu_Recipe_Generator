@@ -1,11 +1,19 @@
 """Search endpoints."""
 
 from fastapi import APIRouter, Query
+from pydantic import BaseModel
 
 from server.schemas.search import CategoryInfo, SearchRequest, SearchResponse
 from server.services import search_service
 
 router = APIRouter()
+
+
+class SuggestionResponse(BaseModel):
+    """Autocomplete suggestion with source label."""
+
+    text: str
+    source: str
 
 
 @router.post(
@@ -21,13 +29,14 @@ async def search(request: SearchRequest) -> SearchResponse:
 
 @router.get(
     "/suggest",
-    response_model=list[str],
+    response_model=list[SuggestionResponse],
     status_code=200,
     summary="Get autocomplete suggestions for search query",
 )
-async def suggestions(query: str = Query(default="")) -> list[str]:
-    """Return autocomplete suggestions."""
-    return await search_service.get_suggestions(query)
+async def suggestions(query: str = Query(default="")) -> list[SuggestionResponse]:
+    """Return autocomplete suggestions with source labels."""
+    result = await search_service.get_suggestions(query)
+    return [SuggestionResponse(text=s.text, source=s.source) for s in result]
 
 
 @router.get(
